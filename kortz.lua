@@ -101,6 +101,42 @@ local MASK_EQUIPMENT_PREPS = 32 | 64 | 128 | 256
 local MASK_WEAPON_LOADOUTS = 512 | 1024 | 2048
 local MASK_COMPLETE_ALL    = MASK_EQUIPMENT_PREPS | MASK_WEAPON_LOADOUTS
 
+local FINALE_SCRIPT           = "fm_mission_controller_v3"
+local LOCAL_FINGERPRINT_STATE = 26866
+local LOCAL_VAULT_HACK_STATE  = 27914
+local HACK_STATE_SUCCESS      = 5
+
+local GLOBAL_LASER_STATE = 1935711
+local LASER_SCRIPT_HASH  = -1624844502 -- joaat("fmmc_lasers")
+
+local NATIVE_THREADS_RUNNING = 0x2C83A9DA6BFFC4F9
+
+local function BypassHack(offset, label)
+    if Natives.InvokeInt(NATIVE_THREADS_RUNNING, J(FINALE_SCRIPT)) == 0 then
+        Log(F("[Bypass] %s not running — start the finale first", FINALE_SCRIPT))
+        Toast("Not in the heist finale.")
+        return
+    end
+
+    ScriptLocal.SetInt(J(FINALE_SCRIPT), offset, HACK_STATE_SUCCESS)
+    Log(F("[Bypass] %s should've been skipped", label))
+    Toast(F("%s bypassed.", label))
+end
+
+local function DisableLasers()
+    if Natives.InvokeInt(NATIVE_THREADS_RUNNING, LASER_SCRIPT_HASH) == 0 then
+        Log("[Lasers] Laser room not active — press this inside the vault laser room")
+        Toast("Not in the laser room.")
+        return
+    end
+
+    local state = ScriptGlobal.GetInt(GLOBAL_LASER_STATE) or 0
+    ScriptGlobal.SetInt(GLOBAL_LASER_STATE, state | 1 | (1 << 4))
+
+    Log("[Lasers] Vault laser grid deactivated (Global_1935711 bits 0,4) ")
+    Toast("Vault lasers disabled.")
+end
+
 local function ReloadBoard()
     Log("[Board] Step out of the art room and back in to refresh the board")
     Toast("Step out of the art room and back in to refresh the board.")
@@ -216,7 +252,7 @@ Ftr.ScopeOut = AddFeature({
 
 Ftr.PrimaryTarget = AddFeature({
     id   = "Primary_Target",
-    name = "Primary Target",
+    name = "",
     type = eFeatureType.Combo,
     desc = "Select the vault painting (primary target).",
     list = LIST_PRIMARY_TARGETS
@@ -368,11 +404,41 @@ Ftr.ForceSetup = AddFeature({
             SetInt(STAT_COOLDOWN_HARD, 0)
 
             Script.Yield(500)
-                    
+
             ReloadBoard()
             Log(F("[Setup] Forced heist setup with target «%s» ", name))
             Toast("Forced setup done.")
         end)
+    end
+})
+
+Ftr.BypassFingerprint = AddFeature({
+    id   = "Bypass_Fingerprint",
+    name = "Bypass Fingerprint Hack",
+    type = eFeatureType.Button,
+    desc = "Instantly completes the fingerprint hack. Press it WHILE the minigame is on screen.",
+    func = function()
+        BypassHack(LOCAL_FINGERPRINT_STATE, "Fingerprint hack")
+    end
+})
+
+Ftr.BypassVault = AddFeature({
+    id   = "Bypass_Vault",
+    name = "Bypass Vault Hack",
+    type = eFeatureType.Button,
+    desc = "Instantly completes the vault door/keypad hack. Press it WHILE the minigame is on screen.",
+    func = function()
+        BypassHack(LOCAL_VAULT_HACK_STATE, "Vault hack")
+    end
+})
+
+Ftr.DisableLasers = AddFeature({
+    id   = "Disable_Lasers",
+    name = "Disable Vault Lasers",
+    type = eFeatureType.Button,
+    desc = "Deactivates the entire green-vault laser grid (mirrors a successful laser hack). Press it inside the vault laser room.",
+    func = function()
+        DisableLasers()
     end
 })
 
@@ -439,13 +505,7 @@ Ftr.ResetAwards = AddFeature({
     end
 })
 
-local COL_HEADER = { 0.30, 0.65, 1.00, 1.00 }
-local COL_MUTED  = { 0.60, 0.60, 0.60, 1.00 }
-
-local function Header(text)
-    ImGui.TextColored(COL_HEADER[1], COL_HEADER[2], COL_HEADER[3], COL_HEADER[4], text)
-    ImGui.Separator()
-end
+local COL_MUTED = { 0.60, 0.60, 0.60, 1.00 }
 
 local function Muted(text)
     ImGui.TextColored(COL_MUTED[1], COL_MUTED[2], COL_MUTED[3], COL_MUTED[4], text)
@@ -459,40 +519,55 @@ local function RenderKortzTab()
         ImGui.TableNextRow()
         ImGui.TableSetColumnIndex(0)
 
-        if ClickGUI.BeginCustomChildWindow("Heist Setup") then
-            Header("Scope Out")
-            ClickGUI.RenderFeature(Ftr.ScopeOut.hash)
-
-            Header("Primary Target")
+        if ClickGUI.BeginCustomChildWindow("Primary Target") then
             ClickGUI.RenderFeature(Ftr.PrimaryTarget.hash)
             ClickGUI.RenderFeature(Ftr.GetTarget.hash)
             ImGui.SameLine()
             ClickGUI.RenderFeature(Ftr.ApplyTarget.hash)
+            ClickGUI.EndCustomChildWindow()
+        end
+        
+        if ClickGUI.BeginCustomChildWindow("Scope Out") then
+            ClickGUI.RenderFeature(Ftr.ScopeOut.hash)
+            ClickGUI.EndCustomChildWindow()
+        end
 
-            Header("Preps")
+        if ClickGUI.BeginCustomChildWindow("Preps") then
             ClickGUI.RenderFeature(Ftr.CompleteAll.hash)
+            ClickGUI.RenderFeature(Ftr.ForceSetup.hash)
+            ClickGUI.EndCustomChildWindow()
+        end
 
-            Header("Mansion Paintings")
+        if ClickGUI.BeginCustomChildWindow("Mansion Paintings") then
             ClickGUI.RenderFeature(Ftr.OwnAllPaintings.hash)
             ClickGUI.RenderFeature(Ftr.ResetPaintings.hash)
             ClickGUI.EndCustomChildWindow()
         end
 
+        if ClickGUI.BeginCustomChildWindow("Heist Minigames") then
+            ClickGUI.RenderFeature(Ftr.BypassFingerprint.hash)
+            ClickGUI.RenderFeature(Ftr.BypassVault.hash)
+            ClickGUI.RenderFeature(Ftr.DisableLasers.hash)
+            ClickGUI.EndCustomChildWindow()
+        end
+
         ImGui.TableNextColumn()
 
-        if ClickGUI.BeginCustomChildWindow("Heist Control") then
-            Header("Buyer Requests")
+        if ClickGUI.BeginCustomChildWindow("Buyer Requests") then
             ClickGUI.RenderFeature(Ftr.LootSlot1.hash)
             ClickGUI.RenderFeature(Ftr.LootSlot2.hash)
             ClickGUI.RenderFeature(Ftr.LootSlot3.hash)
             ClickGUI.RenderFeature(Ftr.ApplyLoot.hash)
+            ClickGUI.EndCustomChildWindow()
+        end
 
-            Header("Misc")
+        if ClickGUI.BeginCustomChildWindow("Misc") then
             ClickGUI.RenderFeature(Ftr.ClearCooldowns.hash)
             ClickGUI.RenderFeature(Ftr.WeeklyBoost.hash)
-            ClickGUI.RenderFeature(Ftr.ForceSetup.hash)
+            ClickGUI.EndCustomChildWindow()
+        end
 
-            Header("Awards")
+        if ClickGUI.BeginCustomChildWindow("Awards") then
             ClickGUI.RenderFeature(Ftr.UnlockAwards.hash)
             ImGui.SameLine()
             ClickGUI.RenderFeature(Ftr.ResetAwards.hash)
