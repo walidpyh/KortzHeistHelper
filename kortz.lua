@@ -110,7 +110,31 @@ local HACK_STATE_SUCCESS      = 5
 local GLOBAL_LASER_STATE = 1935711
 local LASER_SCRIPT_HASH  = -1624844502 -- joaat("fmmc_lasers")
 
+local PLANNING_SCRIPT_HASH        = J("kortz_planning")
+local GLOBAL_BOARD_STATE          = 1981302 -- Global_1980570.f_732
+local GLOBAL_BOARD_PREV_STATE     = 1981303 -- Global_1980570.f_732.f_1
+local GLOBAL_BOARD_DONE_FLAGS     = 1981305 -- Global_1980570.f_732.f_3
+local GLOBAL_BOARD_DIRTY_FLAGS    = 1981306 -- Global_1980570.f_732.f_4
+local GLOBAL_BOARD_ACTIVE         = 1981307 -- Global_1980570.f_732.f_5
+local GLOBAL_BOARD_INIT_FLAGS     = 1981663 -- Global_1980570.f_1093
+local BOARD_REFRESH_BLOCKED_BIT   = 17
+local BOARD_REBUILD_STATE         = 1
+local BOARD_ACTIVE_STATE_FALLBACK = 4
+
 local NATIVE_THREADS_RUNNING = 0x2C83A9DA6BFFC4F9
+
+local function SetGlobalBit(global, bit, enabled)
+    local value = ScriptGlobal.GetInt(global) or 0
+
+    if enabled then
+        value = value | (1 << bit)
+    else
+        value = value & (~(1 << bit))
+    end
+
+    ScriptGlobal.SetInt(global, value)
+    return value
+end
 
 local function BypassHack(offset, label)
     if Natives.InvokeInt(NATIVE_THREADS_RUNNING, J(FINALE_SCRIPT)) == 0 then
@@ -140,9 +164,35 @@ local function CompleteLaserHack()
     Toast("Vault lasers disabled.")
 end
 
+local ReloadPlanningBoard
+
 local function ReloadBoard()
-    Log("[Board] Step out of the Art Studio and back in to refresh the board")
-    Toast("Step out of the Art Studio and back in to refresh the board.")
+    ReloadPlanningBoard()
+end
+
+ReloadPlanningBoard = function()
+    if Natives.InvokeInt(NATIVE_THREADS_RUNNING, PLANNING_SCRIPT_HASH) == 0 then
+        Log("[Board] kortz_planning is not running — stand near/open the planning board first")
+        Toast("Open or stand near the planning board first.")
+        return
+    end
+
+    local currentState = ScriptGlobal.GetInt(GLOBAL_BOARD_STATE) or 0
+    local previousState = currentState
+
+    if previousState < 1 or previousState > 5 then
+        previousState = BOARD_ACTIVE_STATE_FALLBACK
+    end
+
+    ScriptGlobal.SetInt(GLOBAL_BOARD_PREV_STATE, previousState)
+    SetGlobalBit(GLOBAL_BOARD_DIRTY_FLAGS, previousState, true)
+    SetGlobalBit(GLOBAL_BOARD_DONE_FLAGS, previousState, false)
+    SetGlobalBit(GLOBAL_BOARD_INIT_FLAGS, BOARD_REFRESH_BLOCKED_BIT, false)
+    ScriptGlobal.SetInt(GLOBAL_BOARD_STATE, BOARD_REBUILD_STATE)
+    ScriptGlobal.SetInt(GLOBAL_BOARD_ACTIVE, 1)
+
+    Log(F("[Board] Forced kortz_planning board state %d -> %d for scaleform rebuild", currentState, BOARD_REBUILD_STATE))
+    Toast("Planning board reload triggered.")
 end
 
 local LIST_PRIMARY_TARGETS = {
@@ -290,6 +340,16 @@ Ftr.ApplyTarget = AddFeature({
         ReloadBoard()
         Log(F("[Target] Primary target set to «%s» (id %d)", name, index))
         Toast(F("Target: %s", name))
+    end
+})
+
+Ftr.ReloadPlanningBoard = AddFeature({
+    id   = "Reload_Planning_Board",
+    name = "Reload Planning Board",
+    type = eFeatureType.Button,
+    desc = "Experimental: nudges kortz_planning back through its board data rebuild state so changed K26 stats show without leaving the art room.",
+    func = function()
+        ReloadPlanningBoard()
     end
 })
 
@@ -540,6 +600,7 @@ local function RenderKortzTab()
             ClickGUI.RenderFeature(Ftr.GetTarget.hash)
             ImGui.SameLine()
             ClickGUI.RenderFeature(Ftr.ApplyTarget.hash)
+            ClickGUI.RenderFeature(Ftr.ReloadPlanningBoard.hash)
             
             ClickGUI.EndCustomChildWindow()
         end
