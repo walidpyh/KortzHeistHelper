@@ -27,7 +27,7 @@ A [Cherax](https://cherax.menu/) Lua script for the new **Kortz Center Heist**.
 
 1. Download `kortz.lua`
 2. Drop it into your `Cherax\Lua` folder (or use **Cherax → Lua Editor → New Script → Save it**)
-3. Run the script — a **Kortz Heist** tab appears in the Click GUI (INSERT menu)
+3. Run the script
 
 ## Usage
 
@@ -56,8 +56,7 @@ A [Cherax](https://cherax.menu/) Lua script for the new **Kortz Center Heist**.
   invaluable reference for the Cherax Lua API (FeatureMgr, ClickGUI, stat wrappers and
   overall script structure)
 - [SourceModzZ/latest-decompiled-scripts-from-gta-v-enhanced_1.73](https://github.com/SourceModzZ/latest-decompiled-scripts-from-gta-v-enhanced_1.73) —
-  decompiled `kortz_planning` / `fm_content_kortz_*` scripts used to map the K26 stats,
-  prep bitsets and planning-board logic
+  decompiled `kortz_planning` / `fm_content_kortz_*`
 
 ## Disclaimer
 
