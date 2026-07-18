@@ -304,7 +304,7 @@ Ftr.ScopeOut = AddFeature({
 
 Ftr.PrimaryTarget = AddFeature({
     id   = "Primary_Target",
-    name = "Primary Target",
+    name = "",
     type = eFeatureType.Combo,
     desc = "Select the vault painting (primary target).",
     list = LIST_PRIMARY_TARGETS
@@ -595,7 +595,7 @@ local function RenderKortzTab()
             ClickGUI.EndCustomChildWindow()
         end
 
-        if ClickGUI.BeginCustomChildWindow("Heist") then
+        if ClickGUI.BeginCustomChildWindow("Primary Target") then
             ClickGUI.RenderFeature(Ftr.PrimaryTarget.hash)
             ClickGUI.RenderFeature(Ftr.GetTarget.hash)
             ImGui.SameLine()
