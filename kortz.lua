@@ -106,6 +106,7 @@ local LOCAL_FINGERPRINT_STATE = 26866
 local LOCAL_VAULT_HACK_STATE  = 27914
 local HACK_STATE_SUCCESS      = 5
 
+
 local GLOBAL_LASER_STATE = 1935711
 local LASER_SCRIPT_HASH  = -1624844502 -- joaat("fmmc_lasers")
 
@@ -123,7 +124,7 @@ local function BypassHack(offset, label)
     Toast(F("%s bypassed.", label))
 end
 
-local function DisableLasers()
+local function CompleteLaserHack()
     if Natives.InvokeInt(NATIVE_THREADS_RUNNING, LASER_SCRIPT_HASH) == 0 then
         Log("[Lasers] Laser room not active — press this inside the vault laser room")
         Toast("Not in the laser room.")
@@ -252,7 +253,7 @@ Ftr.ScopeOut = AddFeature({
 
 Ftr.PrimaryTarget = AddFeature({
     id   = "Primary_Target",
-    name = "",
+    name = "Primary Target",
     type = eFeatureType.Combo,
     desc = "Select the vault painting (primary target).",
     list = LIST_PRIMARY_TARGETS
@@ -300,7 +301,7 @@ Ftr.CompleteAll = AddFeature({
         local name, index = GetComboName(Ftr.PrimaryTarget)
 
         OrInt(STAT_GENERAL_BS, MASK_COMPLETE_ALL)
-        SetInt(STAT_ROBBERY_PROG, 65535)
+        SetInt(STAT_ROBBERY_PROG, -1)
         SetInt(STAT_SCOPING_BS, -1)
         SetInt(STAT_POI_BS, -1)
         ReloadBoard()
@@ -385,7 +386,7 @@ Ftr.ResetPaintings = AddFeature({
 
 Ftr.ForceSetup = AddFeature({
     id   = "Force_Setup",
-    name = "Force Hardmode (aggressive)",
+    name = "Force Setup Heist (aggressive)",
     type = eFeatureType.Button,
     desc = "Sledgehammer: sets every K26 bitset to -1, rolls a seed and clears cooldowns. Use if the normal prep skip isn't enough.",
     func = function()
@@ -399,9 +400,9 @@ Ftr.ForceSetup = AddFeature({
             SetInt(STAT_POI_BS, -1)
             SetInt(STAT_BUYREQ_BS, -1)
             SetInt(STAT_TARGETS_OWNED, -1)
-            SetInt(STAT_HEIST_SEED, math.random(0, 2147483646))
-            SetInt(STAT_COOLDOWN, 0)
-            SetInt(STAT_COOLDOWN_HARD, 0)
+            --[[ SetInt(STAT_HEIST_SEED, math.random(0, 2147483646)) ]]
+--[[             SetInt(STAT_COOLDOWN, 0)
+            SetInt(STAT_COOLDOWN_HARD, 0) ]]
 
             Script.Yield(500)
 
@@ -411,6 +412,8 @@ Ftr.ForceSetup = AddFeature({
         end)
     end
 })
+
+
 
 Ftr.BypassFingerprint = AddFeature({
     id   = "Bypass_Fingerprint",
@@ -432,13 +435,13 @@ Ftr.BypassVault = AddFeature({
     end
 })
 
-Ftr.DisableLasers = AddFeature({
-    id   = "Disable_Lasers",
-    name = "Disable Vault Lasers",
+Ftr.CompleteLaser = AddFeature({
+    id   = "Complete_Laser",
+    name = "Remove Lasers",
     type = eFeatureType.Button,
-    desc = "Deactivates the entire green-vault laser grid (mirrors a successful laser hack). Press it inside the vault laser room.",
+    desc = "Press it WHILE inside the laser room.",
     func = function()
-        DisableLasers()
+        CompleteLaserHack()
     end
 })
 
@@ -461,7 +464,7 @@ Ftr.WeeklyBoost = AddFeature({
     type = eFeatureType.Button,
     desc = "Sets MPX_WEEKLY_BOOST_BS to all bits.",
     func = function()
-        SetInt(STAT_WEEKLY_BOOST, -1)
+        SetInt(STAT_WEEKLY_BOOST, 1)
         Log("[Boost] Weekly boost enabled (WEEKLY_BOOST_BS = -1) ")
         Toast("Weekly boost enabled.")
     end
@@ -519,24 +522,20 @@ local function RenderKortzTab()
         ImGui.TableNextRow()
         ImGui.TableSetColumnIndex(0)
 
-        if ClickGUI.BeginCustomChildWindow("Primary Target") then
-            ClickGUI.RenderFeature(Ftr.PrimaryTarget.hash)
-            ClickGUI.RenderFeature(Ftr.GetTarget.hash)
-            ImGui.SameLine()
-            ClickGUI.RenderFeature(Ftr.ApplyTarget.hash)
-            ClickGUI.EndCustomChildWindow()
-        end
-        
         if ClickGUI.BeginCustomChildWindow("Scope Out") then
             ClickGUI.RenderFeature(Ftr.ScopeOut.hash)
             ClickGUI.EndCustomChildWindow()
         end
 
-        if ClickGUI.BeginCustomChildWindow("Preps") then
+        if ClickGUI.BeginCustomChildWindow("Heist") then
+            ClickGUI.RenderFeature(Ftr.PrimaryTarget.hash)
+            ClickGUI.RenderFeature(Ftr.GetTarget.hash)
+            ImGui.SameLine()
+            ClickGUI.RenderFeature(Ftr.ApplyTarget.hash)
             ClickGUI.RenderFeature(Ftr.CompleteAll.hash)
-            ClickGUI.RenderFeature(Ftr.ForceSetup.hash)
             ClickGUI.EndCustomChildWindow()
         end
+
 
         if ClickGUI.BeginCustomChildWindow("Mansion Paintings") then
             ClickGUI.RenderFeature(Ftr.OwnAllPaintings.hash)
@@ -546,7 +545,7 @@ local function RenderKortzTab()
 
         if ClickGUI.BeginCustomChildWindow("Heist Minigames") then
             ClickGUI.RenderFeature(Ftr.BypassFingerprint.hash)
-            ClickGUI.RenderFeature(Ftr.DisableLasers.hash)
+			ClickGUI.RenderFeature(Ftr.CompleteLaser.hash)
             ClickGUI.RenderFeature(Ftr.BypassVault.hash)
             ClickGUI.EndCustomChildWindow()
         end
