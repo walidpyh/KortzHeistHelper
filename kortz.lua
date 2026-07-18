@@ -209,7 +209,7 @@ Ftr.ScopeOut = AddFeature({
         SetInt(STAT_SCOPING_BS, -1)
         SetInt(STAT_POI_BS, -1)
         ReloadBoard()
-        Log("[Scoping] Scope-out completed (SCOPING_BS = -1, POI_BS = -1) ツ")
+        Log("[Scoping] Scope-out completed (SCOPING_BS = -1, POI_BS = -1) ")
         Toast("Scope-out completed.")
     end
 })
@@ -232,10 +232,10 @@ Ftr.GetTarget = AddFeature({
 
         if id >= 0 and id <= 26 then
             SetComboIndex(Ftr.PrimaryTarget, id)
-            Log(F("[Target] Current primary target: «%s» (id %d) ツ", LIST_PRIMARY_TARGETS[id + 1], id))
+            Log(F("[Target] Current primary target: «%s» (id %d) ", LIST_PRIMARY_TARGETS[id + 1], id))
             Toast(F("Current: %s", LIST_PRIMARY_TARGETS[id + 1]))
         else
-            Log(F("[Target] Unknown target id %d ツ", id))
+            Log(F("[Target] Unknown target id %d ", id))
             Toast(F("Unknown target id %d.", id))
         end
     end
@@ -250,7 +250,7 @@ Ftr.ApplyTarget = AddFeature({
         local name, index = GetComboName(Ftr.PrimaryTarget)
         SetInt(STAT_HEIST_TARGET, index)
         ReloadBoard()
-        Log(F("[Target] Primary target set to «%s» (id %d) ツ", name, index))
+        Log(F("[Target] Primary target set to «%s» (id %d)", name, index))
         Toast(F("Target: %s", name))
     end
 })
@@ -269,7 +269,7 @@ Ftr.CompleteAll = AddFeature({
         SetInt(STAT_POI_BS, -1)
         ReloadBoard()
 
-        Log(F("[Preps] ALL preps completed — target «%s» ツ", name))
+        Log(F("[Preps] ALL preps completed — target «%s» ", name))
         Toast("All preps done.")
     end
 })
@@ -318,7 +318,7 @@ Ftr.ApplyLoot = AddFeature({
         SetInt(STAT_BUYREQ_BS, mask)
         SetInt(STAT_STOLENLAST_BS, 0)
         ReloadBoard()
-        Log(F("[Loot] Buyer requests applied: %s (mask 0x%X) ツ", (#names > 0) and table.concat(names, ", ") or "none", mask))
+        Log(F("[Loot] Buyer requests applied: %s (mask 0x%X) ", (#names > 0) and table.concat(names, ", ") or "none", mask))
         Toast("Buyer requests applied.")
     end
 })
@@ -330,7 +330,7 @@ Ftr.OwnAllPaintings = AddFeature({
     desc = "Marks every painting as owned/collected (TARGETS_OWNED_BS = -1) so the full mansion gallery is kept. Owned paintings count as already stolen — first-steal bonuses won't apply.",
     func = function()
         SetInt(STAT_TARGETS_OWNED, -1)
-        Log("[Paintings] All mansion paintings owned (TARGETS_OWNED_BS = -1) ツ")
+        Log("[Paintings] All mansion paintings owned (TARGETS_OWNED_BS = -1) ")
         Toast("All mansion paintings owned.")
     end
 })
@@ -342,7 +342,7 @@ Ftr.ResetPaintings = AddFeature({
     desc = "Clears the owned-paintings bitset (TARGETS_OWNED_BS = 0) — restores first-steal bonuses and full target rotation.",
     func = function()
         SetInt(STAT_TARGETS_OWNED, 0)
-        Log("[Paintings] Owned paintings reset (TARGETS_OWNED_BS = 0) ツ")
+        Log("[Paintings] Owned paintings reset (TARGETS_OWNED_BS = 0) ")
         Toast("Owned paintings reset.")
     end
 })
@@ -370,7 +370,7 @@ Ftr.ForceSetup = AddFeature({
             Script.Yield(500)
                     
             ReloadBoard()
-            Log(F("[Setup] Forced heist setup with target «%s» ツ", name))
+            Log(F("[Setup] Forced heist setup with target «%s» ", name))
             Toast("Forced setup done.")
         end)
     end
@@ -384,7 +384,7 @@ Ftr.ClearCooldowns = AddFeature({
     func = function()
         SetInt(STAT_COOLDOWN, 0)
         SetInt(STAT_COOLDOWN_HARD, 0)
-        Log("[Cooldown] Kortz cooldowns cleared ツ")
+        Log("[Cooldown] Kortz cooldowns cleared ")
         Toast("Cooldowns cleared.")
     end
 })
@@ -396,7 +396,7 @@ Ftr.WeeklyBoost = AddFeature({
     desc = "Sets MPX_WEEKLY_BOOST_BS to all bits.",
     func = function()
         SetInt(STAT_WEEKLY_BOOST, -1)
-        Log("[Boost] Weekly boost enabled (WEEKLY_BOOST_BS = -1) ツ")
+        Log("[Boost] Weekly boost enabled (WEEKLY_BOOST_BS = -1) ")
         Toast("Weekly boost enabled.")
     end
 })
@@ -415,7 +415,7 @@ Ftr.UnlockAwards = AddFeature({
             end
         end
 
-        Log(F("[Awards] %d Kortz awards unlocked ツ", #KORTZ_AWARDS))
+        Log(F("[Awards] %d Kortz awards unlocked ", #KORTZ_AWARDS))
         Toast("Kortz awards unlocked.")
     end
 })
@@ -434,7 +434,7 @@ Ftr.ResetAwards = AddFeature({
             end
         end
 
-        Log(F("[Awards] %d Kortz awards reset ツ", #KORTZ_AWARDS))
+        Log(F("[Awards] %d Kortz awards reset ", #KORTZ_AWARDS))
         Toast("Kortz awards reset.")
     end
 })
@@ -505,5 +505,5 @@ end
 
 ClickGUI.AddTab(SCRIPT_TITLE, RenderKortzTab)
 
-Log("Kortz Heist Helper by Forlax loaded ツ")
-Toast("Kortz Heist Helper.")
+Log("Kortz Heist Helper by Forlax loaded")
+Toast("Kortz Heist Helper by Forlax")
