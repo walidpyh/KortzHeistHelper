@@ -32,7 +32,7 @@ A [Cherax](https://cherax.menu/) Lua script for the new **Kortz Center Heist**.
 ## Usage
 
 1. Be **online** with your character fully loaded
-2. **⚠️ BUY THE HEIST FIRST** — accept the GTA$100,000 purchase prompt first at the planning
+2. **⚠️ SETUP THE HEIST FIRST** — accept the GTA$100,000 setup purchase prompt first at the planning
    board before completing any scope or prep button. The script only completes what the
    game thinks you've started; applying stats before buying the heist does nothing
    (or leaves the board in a weird state)
