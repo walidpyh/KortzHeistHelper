@@ -546,8 +546,8 @@ local function RenderKortzTab()
 
         if ClickGUI.BeginCustomChildWindow("Heist Minigames") then
             ClickGUI.RenderFeature(Ftr.BypassFingerprint.hash)
-            ClickGUI.RenderFeature(Ftr.BypassVault.hash)
             ClickGUI.RenderFeature(Ftr.DisableLasers.hash)
+            ClickGUI.RenderFeature(Ftr.BypassVault.hash)
             ClickGUI.EndCustomChildWindow()
         end
 
