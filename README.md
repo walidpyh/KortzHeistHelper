@@ -2,8 +2,8 @@
 
 A [Cherax](https://cherax.menu/) Lua script for the new **Kortz Center Heist**.
 
-<img width="591" height="551" alt="image" src="https://github.com/user-attachments/assets/21105025-4b53-4d07-9b53-d6f4101d1675" />
 
+<img width="591" height="542" alt="image" src="https://github.com/user-attachments/assets/6fb23dce-ed29-4875-9c35-0b21491bb7e2" />
 
 > **Heads up:** this is my first script, expect bugs and design ugliness 😅! I just wanted to share it with the community.
 
