@@ -3,7 +3,7 @@
 
 A [Cherax](https://cherax.menu/) Lua script for the new **Kortz Center Heist**.
 
-> **Heads up:** this is my first script, expect bugs! I just wanted to share it with the community.
+> **Heads up:** this is my first script, expect bugs and design ugliness 😅! I just wanted to share it with the community.
 
 ## Features
 
@@ -12,7 +12,7 @@ A [Cherax](https://cherax.menu/) Lua script for the new **Kortz Center Heist**.
 - **Primary Target** — pick any of the 27 vault paintings, read back the current one, apply your choice
 - **Complete ALL Preps** — full prep skip: scope-out, every setup mission, all 3 unmarked
   weapon loadouts (Street / Security / Military) and your selected target in one click
-- **Mansion Paintings** — own the entire mansion gallery (keep all paintings), or reset
+- **Mansion Paintings** — own the entire mansion gallery (keep all paintings) or reset
   ownership to restore first-steal bonuses and full target rotation
 
 ### Heist Control
@@ -31,15 +31,14 @@ A [Cherax](https://cherax.menu/) Lua script for the new **Kortz Center Heist**.
 
 ## Usage
 
-1. Be **online** with your character fully loaded
-2. **⚠️ SETUP THE HEIST FIRST** — accept the GTA$100,000 setup purchase prompt first at the planning
+1. **⚠️ SETUP THE HEIST FIRST** — accept the GTA$100,000 setup purchase prompt first at the planning
    board before completing any scope or prep button. The script only completes what the
    game thinks you've started; applying stats before buying the heist does nothing
    (or leaves the board in a weird state)
-3. Pick your primary target (Optional if you wanna switch it), press **Complete ALL Preps**
-4. **Step out of the art room (in the mansion) and back in** so the planning board
+2. Pick your primary target (Optional if you wanna switch it), press **Complete ALL Preps**
+3. **Step out of the art room (in the mansion) and back in** so the planning board
    reloads, can't figure out how to make it self reload (maybe some can help with that?)
-5. Profit! 
+4. Profit! 
 
 ## Notes
 
