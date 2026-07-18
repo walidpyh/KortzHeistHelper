@@ -385,7 +385,7 @@ Ftr.ResetPaintings = AddFeature({
 
 Ftr.ForceSetup = AddFeature({
     id   = "Force_Setup",
-    name = "Force Setup Heist (aggressive)",
+    name = "Force Hardmode (aggressive)",
     type = eFeatureType.Button,
     desc = "Sledgehammer: sets every K26 bitset to -1, rolls a seed and clears cooldowns. Use if the normal prep skip isn't enough.",
     func = function()
