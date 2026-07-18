@@ -158,8 +158,6 @@ local function CompleteLaserHack()
     local state = ScriptGlobal.GetInt(GLOBAL_LASER_STATE) or 0
     ScriptGlobal.SetInt(GLOBAL_LASER_STATE, state | 1 | (1 << 4))
 
-
-
     Log("[Lasers] Vault laser grid deactivated (Global_1935711 bits 0,4) ")
     Toast("Vault lasers disabled.")
 end
@@ -227,38 +225,38 @@ local LIST_PRIMARY_TARGETS = {
 
 local LIST_LOOT_ITEMS = {
     "None",
-    "The Great Circle Back ($145K)",
-    "Swingset Study No. LXIX ($775K)",
-    "With Friends Like These ($850K)",
-    "The Hunter Becomes The Hunted ($750K)",
-    "La Duchesse ($105K)",
-    "Orange Crush ($107.5K)",
-    "The Chief ($110K)",
-    "Sod Off ($115K)",
-    "Cooked ($120K)",
-    "Venus d'Algernon (Ivory) ($120K)",
-    "Don't Forgo These Blueprints ($150K)",
-    "Do You See Me ($105K)",
-    "Het Gouden Hondje ($825K)",
-    "Coquard Rings ($31K)",
-    "Pharaonic Bangles ($31K)",
-    "Art Deco Rings ($34K)",
-    "Antique Bands ($35K)",
-    "Antique Rings ($34K)",
-    "Byzantine Hoops ($29K)",
-    "Coquard Bracelets ($29K)",
-    "Coquard Carcanet (Tanzanite) ($97.5K)",
-    "Fertility Statue (Ivory) ($62K)",
-    "Fertility Statue (Bronze) ($88K)",
-    "Œuf de Coquard décoratif ($54K)",
-    "Œuf de Coquard enchanté ($52K)",
-    "Memento Non Mori (Emerald) ($77.5K)",
-    "Meteorite Fragment ($84K)",
-    "Yellow Topaz Gemstone ($107.5K)",
-    "Perlino Andalusian ($95K)",
-    "Unknown Slot 29",
-    "Unknown Slot 30",
-    "Unknown Slot 31"
+    "Statue A",          -- slot 0
+    "Jewellery A",       -- slot 1
+    "Horse Figurine A",  -- slot 2
+    "Necklace A",        -- slot 3
+    "Skull B",           -- slot 4
+    "Bracelet B",        -- slot 5
+    "Meteorite",         -- slot 6
+    "Idol B",            -- slot 7
+    "Bracelet A",        -- slot 8
+    "Egg B",             -- slot 9
+    "Idol E",            -- slot 10
+    "Ring A",            -- slot 11
+    "Bracelet C",        -- slot 12
+    "Ring B",            -- slot 13
+    "Bracelet E",        -- slot 14
+    "Ring C",            -- slot 15
+    "Egg D",             -- slot 16
+    "Bracelet D",        -- slot 17
+    "Painting A",        -- slot 18
+    "Painting B",        -- slot 19
+    "Painting C",        -- slot 20
+    "Painting D",        -- slot 21
+    "Painting E",        -- slot 22
+    "Painting F",        -- slot 23
+    "Painting G",        -- slot 24
+    "Painting H",        -- slot 25
+    "Painting I",        -- slot 26
+    "Painting J",        -- slot 27
+    "Painting K",        -- slot 28
+    "Painting L",        -- slot 29
+    "Painting M",        -- slot 30
+    "Painting N"         -- slot 31
 }
 
 local KORTZ_AWARDS = {
@@ -382,7 +380,7 @@ Ftr.LootSlot1 = AddFeature({
     id   = "Loot_Slot_1",
     name = "Buyer Request 1",
     type = eFeatureType.Combo,
-    desc = "First buyer-requested item. Slot order is best-effort — if the wrong item is marked in-game, tell Forlax which one you got.",
+    desc = "First buyer-requested item.",
     list = LIST_LOOT_ITEMS
 })
 
@@ -406,7 +404,7 @@ Ftr.ApplyLoot = AddFeature({
     id   = "Apply_Loot",
     name = "Apply Buyer Requests",
     type = eFeatureType.Button,
-    desc = "Writes the selected items to BUYREQ_BS and clears STOLENLAST_BS.",
+    desc = "Apply this AFTER your final scope",
     func = function()
         local mask  = 0
         local names = {}
@@ -431,7 +429,7 @@ Ftr.OwnAllPaintings = AddFeature({
     id   = "Own_All_Paintings",
     name = "Own ALL Mansion Paintings",
     type = eFeatureType.Button,
-    desc = "Marks every painting as owned/collected (TARGETS_OWNED_BS = -1) so the full mansion gallery is kept. Owned paintings count as already stolen — first-steal bonuses won't apply.",
+    desc = "Marks every painting as owned/collected  so the full mansion gallery is kept. Owned paintings count as already stolen",
     func = function()
         SetInt(STAT_TARGETS_OWNED, -1)
         Log("[Paintings] All mansion paintings owned (TARGETS_OWNED_BS = -1) ")
@@ -443,7 +441,7 @@ Ftr.ResetPaintings = AddFeature({
     id   = "Reset_Paintings",
     name = "Reset Owned Paintings",
     type = eFeatureType.Button,
-    desc = "Clears the owned-paintings bitset (TARGETS_OWNED_BS = 0) — restores first-steal bonuses and full target rotation.",
+    desc = "Clears the owned-paintings & restores first-steal bonuses and full target rotation.",
     func = function()
         SetInt(STAT_TARGETS_OWNED, 0)
         Log("[Paintings] Owned paintings reset (TARGETS_OWNED_BS = 0) ")
@@ -601,7 +599,7 @@ local function RenderKortzTab()
             ImGui.SameLine()
             ClickGUI.RenderFeature(Ftr.ApplyTarget.hash)
             ClickGUI.RenderFeature(Ftr.ReloadPlanningBoard.hash)
-            
+
             ClickGUI.EndCustomChildWindow()
         end
 
