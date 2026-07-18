@@ -301,7 +301,10 @@ Ftr.CompleteAll = AddFeature({
     func = function()
         local name, index = GetComboName(Ftr.PrimaryTarget)
 
-        OrInt(STAT_GENERAL_BS, MASK_COMPLETE_ALL)
+        --OrInt(STAT_GENERAL_BS, MASK_COMPLETE_ALL)
+
+        SetInt(STAT_GENERAL_BS, -1)
+        SetInt(STAT_GENERAL_BS2, -1)
         SetInt(STAT_ROBBERY_PROG, -1)
         SetInt(STAT_SCOPING_BS, -1)
         SetInt(STAT_POI_BS, -1)
