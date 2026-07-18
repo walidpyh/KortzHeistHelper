@@ -172,8 +172,8 @@ end
 
 ReloadPlanningBoard = function()
     if Natives.InvokeInt(NATIVE_THREADS_RUNNING, PLANNING_SCRIPT_HASH) == 0 then
-        Log("[Board] kortz_planning is not running — stand near/open the planning board first")
-        Toast("Open or stand near the planning board first.")
+        Log("[Board] Planning board is not open or nearby")
+        Toast("Go to the planning board first, then try again.")
         return
     end
 
@@ -191,8 +191,8 @@ ReloadPlanningBoard = function()
     ScriptGlobal.SetInt(GLOBAL_BOARD_STATE, BOARD_REBUILD_STATE)
     ScriptGlobal.SetInt(GLOBAL_BOARD_ACTIVE, 1)
 
-    Log(F("[Board] Forced kortz_planning board state %d -> %d for scaleform rebuild", currentState, BOARD_REBUILD_STATE))
-    Toast("Planning board reload triggered.")
+    Log(F("[Board] Planning board refresh requested from state %d", currentState))
+    Toast("Planning board refreshed.")
 end
 
 local LIST_PRIMARY_TARGETS = {
@@ -347,7 +347,7 @@ Ftr.ReloadPlanningBoard = AddFeature({
     id   = "Reload_Planning_Board",
     name = "Reload Planning Board",
     type = eFeatureType.Button,
-    desc = "Experimental: nudges kortz_planning back through its board data rebuild state so changed K26 stats show without leaving the art room.",
+    desc = "Refreshes the planning board after changing targets, preps, or buyer requests..",
     func = function()
         ReloadPlanningBoard()
     end
