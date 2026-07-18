@@ -102,7 +102,8 @@ local MASK_WEAPON_LOADOUTS = 512 | 1024 | 2048
 local MASK_COMPLETE_ALL    = MASK_EQUIPMENT_PREPS | MASK_WEAPON_LOADOUTS
 
 local function ReloadBoard()
-    Log("[Board] Step out of the art room and back in to refresh the board ツ")
+    Log("[Board] Step out of the art room and back in to refresh the board")
+    Toast("Step out of the art room and back in to refresh the board.")
 end
 
 local LIST_PRIMARY_TARGETS = {
@@ -264,7 +265,6 @@ Ftr.CompleteAll = AddFeature({
 
         OrInt(STAT_GENERAL_BS, MASK_COMPLETE_ALL)
         SetInt(STAT_ROBBERY_PROG, 65535)
-        SetInt(STAT_HEIST_TARGET, index)
         SetInt(STAT_SCOPING_BS, -1)
         SetInt(STAT_POI_BS, -1)
         ReloadBoard()
@@ -356,7 +356,6 @@ Ftr.ForceSetup = AddFeature({
         local name, index = GetComboName(Ftr.PrimaryTarget)
 
         Script.QueueJob(function()
-            SetInt(STAT_HEIST_TARGET, index)
             SetInt(STAT_GENERAL_BS, -1)
             SetInt(STAT_GENERAL_BS2, -1)
             SetInt(STAT_ROBBERY_PROG, -1)
@@ -369,8 +368,7 @@ Ftr.ForceSetup = AddFeature({
             SetInt(STAT_COOLDOWN_HARD, 0)
 
             Script.Yield(500)
-
-            SetInt(STAT_HEIST_TARGET, index)
+                    
             ReloadBoard()
             Log(F("[Setup] Forced heist setup with target «%s» ツ", name))
             Toast("Forced setup done.")
