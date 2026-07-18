@@ -8,7 +8,7 @@ local function Log(msg)
 end
 
 local function Toast(msg)
-    GUI.AddToast(SCRIPT_TITLE, msg, 4000, eToastPos.TOP_RIGHT)
+    GUI.AddToast(SCRIPT_TITLE, msg, 5000, eToastPos.TOP_RIGHT)
 end
 
 local function CharStatHash(name)
@@ -134,13 +134,15 @@ local function CompleteLaserHack()
     local state = ScriptGlobal.GetInt(GLOBAL_LASER_STATE) or 0
     ScriptGlobal.SetInt(GLOBAL_LASER_STATE, state | 1 | (1 << 4))
 
+
+
     Log("[Lasers] Vault laser grid deactivated (Global_1935711 bits 0,4) ")
     Toast("Vault lasers disabled.")
 end
 
 local function ReloadBoard()
-    Log("[Board] Step out of the art room and back in to refresh the board")
-    Toast("Step out of the art room and back in to refresh the board.")
+    Log("[Board] Step out of the Art Studio and back in to refresh the board")
+    Toast("Step out of the Art Studio and back in to refresh the board.")
 end
 
 local LIST_PRIMARY_TARGETS = {
@@ -247,7 +249,6 @@ Ftr.ScopeOut = AddFeature({
         SetInt(STAT_POI_BS, -1)
         ReloadBoard()
         Log("[Scoping] Scope-out completed (SCOPING_BS = -1, POI_BS = -1) ")
-        Toast("Scope-out completed.")
     end
 })
 
@@ -304,6 +305,9 @@ Ftr.CompleteAll = AddFeature({
         SetInt(STAT_ROBBERY_PROG, -1)
         SetInt(STAT_SCOPING_BS, -1)
         SetInt(STAT_POI_BS, -1)
+
+        SetInt(STAT_COOLDOWN, 0)
+        SetInt(STAT_COOLDOWN_HARD, 0)
         ReloadBoard()
 
         Log(F("[Preps] ALL preps completed — target «%s» ", name))
@@ -400,9 +404,9 @@ Ftr.ForceSetup = AddFeature({
             SetInt(STAT_POI_BS, -1)
             SetInt(STAT_BUYREQ_BS, -1)
             SetInt(STAT_TARGETS_OWNED, -1)
-            --[[ SetInt(STAT_HEIST_SEED, math.random(0, 2147483646)) ]]
---[[             SetInt(STAT_COOLDOWN, 0)
-            SetInt(STAT_COOLDOWN_HARD, 0) ]]
+            -- SetInt(STAT_HEIST_SEED, math.random(0, 2147483646))
+            -- SetInt(STAT_COOLDOWN, 0)
+            -- SetInt(STAT_COOLDOWN_HARD, 0)
 
             Script.Yield(500)
 
@@ -522,8 +526,9 @@ local function RenderKortzTab()
         ImGui.TableNextRow()
         ImGui.TableSetColumnIndex(0)
 
-        if ClickGUI.BeginCustomChildWindow("Scope Out") then
+        if ClickGUI.BeginCustomChildWindow("Preparations") then
             ClickGUI.RenderFeature(Ftr.ScopeOut.hash)
+            ClickGUI.RenderFeature(Ftr.CompleteAll.hash)
             ClickGUI.EndCustomChildWindow()
         end
 
@@ -532,7 +537,7 @@ local function RenderKortzTab()
             ClickGUI.RenderFeature(Ftr.GetTarget.hash)
             ImGui.SameLine()
             ClickGUI.RenderFeature(Ftr.ApplyTarget.hash)
-            ClickGUI.RenderFeature(Ftr.CompleteAll.hash)
+            
             ClickGUI.EndCustomChildWindow()
         end
 
