@@ -143,7 +143,7 @@ local function ReloadBoard()
 end
 
 local LIST_PRIMARY_TARGETS = {
-    "La Dernière Débauche ($1.925M)",
+    "La Dernière Débauche",
     "Hare Oneself Think",
     "The Downfall of Rome",
     "Brother Brother",
