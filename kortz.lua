@@ -13,8 +13,8 @@ local IS_EE   = (EDITION == "EE")
 
 local EE = {
     FINALE_SCRIPT     = "fm_mission_controller_v3",
-    FINGERPRINT_STATE = 26866,     -- ScriptLocal, write HACK_STATE_SUCCESS
-    VAULT_HACK_STATE  = 27914,     -- ScriptLocal, write HACK_STATE_SUCCESS
+    FINGERPRINT_STATE = 26866,     
+    VAULT_HACK_STATE  = 27914,     
     LASER_STATE       = 1935711,   -- Global_1935711
     BOARD_STATE       = 1981302,   -- Global_1980570.f_732
     BOARD_PREV_STATE  = 1981303,   -- .f_1
@@ -171,7 +171,6 @@ local function Toast(msg)
     GUI.AddToast(SCRIPT_TITLE, msg, 5000, eToastPos.TOP_RIGHT)
 end
 
--- MPX_ stats are per-character; resolve them to the active MP<slot>_ name.
 local function CharStatHash(name)
     if name:sub(1, 4) == "MPX_" then
         local ok, slot = Stats.GetInt(J("MPPLY_LAST_MP_CHAR"))
@@ -292,7 +291,6 @@ end
 local function ReloadBoard()
     if CFG.BOARD_STATE == nil then
         Log("[Board] Auto-reload not mapped for Legacy — step out of the art room and back in")
-        Toast("Re-enter the art room to refresh the board.")
         return
     end
 
