@@ -2,7 +2,7 @@
 
 A [Cherax](https://cherax.menu/) Lua script for the new **Kortz Center Heist**.
 
-<img width="595" height="544" alt="image" src="https://github.com/user-attachments/assets/a00398fc-8b2e-42c3-81e9-acede73e9d70" />
+<img width="589" height="542" alt="image" src="https://github.com/user-attachments/assets/2a85f33c-6919-4c73-aad8-94762b81b54a" />
 
 > **Heads up:** this is my first script, expect bugs and design ugliness 😅! This has been tested on EE only tho.
 
