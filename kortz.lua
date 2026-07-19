@@ -1,87 +1,47 @@
+-- ============================================================================
+-- Kortz Heist Helper by Forlax for Cherax.menu
+-- ============================================================================
+
 local SCRIPT_TITLE = "Kortz Heist"
 
 local J = Utils.Joaat
 local F = string.format
 
-local function Log(msg)
-    Logger.Log(eLogColor.LIGHTGREEN, SCRIPT_TITLE, msg)
-end
+local FORCE_EDITION = nil
+local EDITION = FORCE_EDITION or string.sub(Cherax.GetEdition(), 1, 2)
+local IS_EE   = (EDITION == "EE")
 
-local function Toast(msg)
-    GUI.AddToast(SCRIPT_TITLE, msg, 5000, eToastPos.TOP_RIGHT)
-end
+local EE = {
+    FINALE_SCRIPT     = "fm_mission_controller_v3",
+    FINGERPRINT_STATE = 26866,     -- ScriptLocal, write HACK_STATE_SUCCESS
+    VAULT_HACK_STATE  = 27914,     -- ScriptLocal, write HACK_STATE_SUCCESS
+    LASER_STATE       = 1935711,   -- Global_1935711
+    BOARD_STATE       = 1981302,   -- Global_1980570.f_732
+    BOARD_PREV_STATE  = 1981303,   -- .f_1
+    BOARD_DONE_FLAGS  = 1981305,   -- .f_3
+    BOARD_DIRTY_FLAGS = 1981306,   -- .f_4
+    BOARD_ACTIVE      = 1981307,   -- .f_5
+    BOARD_INIT_FLAGS  = 1981663    -- Global_1980570.f_1093
+}
 
-local function CharStatHash(name)
-    if name:sub(1, 4) == "MPX_" then
-        local ok, slot = Stats.GetInt(J("MPPLY_LAST_MP_CHAR"))
-        name = F("MP%d_%s", (ok and slot) or 0, name:sub(5))
-    end
-    return J(name)
-end
+local LE = {
+    FINALE_SCRIPT     = "fm_mission_controller_v3",
+    FINGERPRINT_STATE = 26464,
+    VAULT_HACK_STATE  = 27512,
+    LASER_STATE       = 1935234,   -- Global_1935234
+    BOARD_STATE       = 1980023,   -- Global_1979291.f_732
+    BOARD_PREV_STATE  = 1980024,
+    BOARD_DONE_FLAGS  = 1980026,
+    BOARD_DIRTY_FLAGS = 1980027,
+    BOARD_ACTIVE      = 1980028,
+    BOARD_INIT_FLAGS  = 1980384    -- Global_1979291.f_1093
+}
 
-local function SetInt(name, value)
-    Stats.SetInt(CharStatHash(name), value)
-end
+local CFG = IS_EE and EE or LE
 
-local function GetInt(name)
-    local ok, value = Stats.GetInt(CharStatHash(name))
-    return ok and value or 0
-end
-
-local function SetBool(name, value)
-    Stats.SetBool(CharStatHash(name), value)
-end
-
-local function OrInt(name, mask)
-    SetInt(name, GetInt(name) | mask)
-end
-
-local function AddFeature(def)
-    def.hash = J("KHT_" .. def.id)
-
-    FeatureMgr.AddFeature(def.hash, def.name, def.type, def.desc or "", function(f)
-        if def.func then
-            def.func(f)
-        end
-    end)
-
-    local feature = FeatureMgr.GetFeature(def.hash)
-
-    if def.list then
-        feature:SetList(def.list)
-    end
-
-    if def.defv then
-        feature:SetDefaultValue(def.defv)
-    end
-
-    if def.lims then
-        feature:SetLimitValues(def.lims[1], def.lims[2])
-    end
-
-    if def.step then
-        feature:SetStepSize(def.step)
-    end
-
-    if def.defv or def.lims or def.step then
-        feature:Reset()
-    end
-
-    return def
-end
-
-local function GetComboIndex(def)
-    return FeatureMgr.GetFeatureListIndex(def.hash)
-end
-
-local function GetComboName(def)
-    local index = GetComboIndex(def)
-    return def.list[index + 1] or "?", index
-end
-
-local function SetComboIndex(def, index)
-    FeatureMgr.GetFeature(def.hash):SetListIndex(index)
-end
+-- ============================================================================
+-- CONSTANTS
+-- ============================================================================
 
 local STAT_GENERAL_BS    = "MPX_K26_GENERAL_BS"
 local STAT_GENERAL_BS2   = "MPX_K26_GENERAL_BS2"
@@ -92,106 +52,19 @@ local STAT_BUYREQ_BS     = "MPX_K26_BUYREQ_BS"
 local STAT_STOLENLAST_BS = "MPX_K26_STOLENLAST_BS"
 local STAT_TARGETS_OWNED = "MPX_K26_TARGETS_OWNED_BS"
 local STAT_HEIST_TARGET  = "MPX_K26_HEIST_TARGET"
-local STAT_HEIST_SEED    = "MPX_K26_HEIST_SEED"
 local STAT_COOLDOWN      = "MPX_K26_HEIST_COOLDOWN"
 local STAT_COOLDOWN_HARD = "MPX_K26_HEIST_COOLDOWN_HARD"
 local STAT_WEEKLY_BOOST  = "MPX_WEEKLY_BOOST_BS"
 
-local MASK_EQUIPMENT_PREPS = 32 | 64 | 128 | 256
-local MASK_WEAPON_LOADOUTS = 512 | 1024 | 2048
-local MASK_COMPLETE_ALL    = MASK_EQUIPMENT_PREPS | MASK_WEAPON_LOADOUTS
+local HACK_STATE_SUCCESS   = 5
+local LASER_SCRIPT_HASH    = -1624844502 -- joaat("fmmc_lasers"), same on both builds
+local PLANNING_SCRIPT_HASH = J("kortz_planning")
 
-local FINALE_SCRIPT           = "fm_mission_controller_v3"
-local LOCAL_FINGERPRINT_STATE = 26866
-local LOCAL_VAULT_HACK_STATE  = 27914
-local HACK_STATE_SUCCESS      = 5
-
-
-local GLOBAL_LASER_STATE = 1935711
-local LASER_SCRIPT_HASH  = -1624844502 -- joaat("fmmc_lasers")
-
-local PLANNING_SCRIPT_HASH        = J("kortz_planning")
-local GLOBAL_BOARD_STATE          = 1981302 -- Global_1980570.f_732
-local GLOBAL_BOARD_PREV_STATE     = 1981303 -- Global_1980570.f_732.f_1
-local GLOBAL_BOARD_DONE_FLAGS     = 1981305 -- Global_1980570.f_732.f_3
-local GLOBAL_BOARD_DIRTY_FLAGS    = 1981306 -- Global_1980570.f_732.f_4
-local GLOBAL_BOARD_ACTIVE         = 1981307 -- Global_1980570.f_732.f_5
-local GLOBAL_BOARD_INIT_FLAGS     = 1981663 -- Global_1980570.f_1093
 local BOARD_REFRESH_BLOCKED_BIT   = 17
 local BOARD_REBUILD_STATE         = 1
 local BOARD_ACTIVE_STATE_FALLBACK = 4
 
 local NATIVE_THREADS_RUNNING = 0x2C83A9DA6BFFC4F9
-
-local function SetGlobalBit(global, bit, enabled)
-    local value = ScriptGlobal.GetInt(global) or 0
-
-    if enabled then
-        value = value | (1 << bit)
-    else
-        value = value & (~(1 << bit))
-    end
-
-    ScriptGlobal.SetInt(global, value)
-    return value
-end
-
-local function BypassHack(offset, label)
-    if Natives.InvokeInt(NATIVE_THREADS_RUNNING, J(FINALE_SCRIPT)) == 0 then
-        Log(F("[Bypass] %s not running — start the finale first", FINALE_SCRIPT))
-        Toast("Not in the heist finale.")
-        return
-    end
-
-    ScriptLocal.SetInt(J(FINALE_SCRIPT), offset, HACK_STATE_SUCCESS)
-    Log(F("[Bypass] %s should've been skipped", label))
-    Toast(F("%s bypassed.", label))
-end
-
-local function CompleteLaserHack()
-    if Natives.InvokeInt(NATIVE_THREADS_RUNNING, LASER_SCRIPT_HASH) == 0 then
-        Log("[Lasers] Laser room not active — press this inside the vault laser room")
-        Toast("Not in the laser room.")
-        return
-    end
-
-    local state = ScriptGlobal.GetInt(GLOBAL_LASER_STATE) or 0
-    ScriptGlobal.SetInt(GLOBAL_LASER_STATE, state | 1 | (1 << 4))
-
-    Log("[Lasers] Vault laser grid deactivated (Global_1935711 bits 0,4) ")
-    Toast("Vault lasers disabled.")
-end
-
-local ReloadPlanningBoard
-
-local function ReloadBoard()
-    ReloadPlanningBoard()
-end
-
-ReloadPlanningBoard = function()
-    if Natives.InvokeInt(NATIVE_THREADS_RUNNING, PLANNING_SCRIPT_HASH) == 0 then
-        Log("[Board] Planning board is not open or nearby")
-        Toast("Go to the planning board first, then try again.")
-        return
-    end
-
-    local currentState = ScriptGlobal.GetInt(GLOBAL_BOARD_STATE) or 0
-    local previousState = currentState
-
-    if previousState < 1 or previousState > 5 then
-        previousState = BOARD_ACTIVE_STATE_FALLBACK
-    end
-
-    ScriptGlobal.SetInt(GLOBAL_BOARD_PREV_STATE, previousState)
-    SetGlobalBit(GLOBAL_BOARD_DIRTY_FLAGS, previousState, true)
-    SetGlobalBit(GLOBAL_BOARD_DONE_FLAGS, previousState, false)
-    SetGlobalBit(GLOBAL_BOARD_INIT_FLAGS, BOARD_REFRESH_BLOCKED_BIT, false)
-    ScriptGlobal.SetInt(GLOBAL_BOARD_STATE, BOARD_REBUILD_STATE)
-    ScriptGlobal.SetInt(GLOBAL_BOARD_ACTIVE, 1)
-
-    Log(F("[Board] Planning board refresh requested from state %d", currentState))
-    Toast("Planning board refreshed.")
-end
 
 local LIST_PRIMARY_TARGETS = {
     "La Dernière Débauche",
@@ -259,6 +132,7 @@ local LIST_LOOT_ITEMS = {
     "Painting N"         -- slot 31
 }
 
+-- { stat, type, unlock value, reset value }
 local KORTZ_AWARDS = {
     { "MPX_AWD_SCOPING",            "bool", true,    false },
     { "MPX_AWD_PREPPER",            "int",  20,      0     },
@@ -285,6 +159,169 @@ local KORTZ_AWARDS = {
     { "MPX_LAPIDARY_BS",            "int",  -1,      0     }
 }
 
+-- ============================================================================
+-- HELPERS funcs
+-- ============================================================================
+
+local function Log(msg)
+    Logger.Log(eLogColor.LIGHTGREEN, SCRIPT_TITLE, msg)
+end
+
+local function Toast(msg)
+    GUI.AddToast(SCRIPT_TITLE, msg, 5000, eToastPos.TOP_RIGHT)
+end
+
+-- MPX_ stats are per-character; resolve them to the active MP<slot>_ name.
+local function CharStatHash(name)
+    if name:sub(1, 4) == "MPX_" then
+        local ok, slot = Stats.GetInt(J("MPPLY_LAST_MP_CHAR"))
+        name = F("MP%d_%s", (ok and slot) or 0, name:sub(5))
+    end
+    return J(name)
+end
+
+local function SetInt(name, value)
+    Stats.SetInt(CharStatHash(name), value)
+end
+
+local function GetInt(name)
+    local ok, value = Stats.GetInt(CharStatHash(name))
+    return ok and value or 0
+end
+
+local function SetBool(name, value)
+    Stats.SetBool(CharStatHash(name), value)
+end
+
+local function GetComboName(def)
+    local index = FeatureMgr.GetFeatureListIndex(def.hash)
+    return def.list[index + 1] or "?", index
+end
+
+local function SetComboIndex(def, index)
+    FeatureMgr.GetFeature(def.hash):SetListIndex(index)
+end
+
+local function AddFeature(def)
+    def.hash = J("KHT_" .. def.id)
+
+    FeatureMgr.AddFeature(def.hash, def.name, def.type, def.desc or "", function(f)
+        if def.func then
+            def.func(f)
+        end
+    end)
+
+    local feature = FeatureMgr.GetFeature(def.hash)
+
+    if def.list then
+        feature:SetList(def.list)
+    end
+
+    if def.defv then
+        feature:SetDefaultValue(def.defv)
+    end
+
+    if def.lims then
+        feature:SetLimitValues(def.lims[1], def.lims[2])
+    end
+
+    if def.step then
+        feature:SetStepSize(def.step)
+    end
+
+    if def.defv or def.lims or def.step then
+        feature:Reset()
+    end
+
+    return def
+end
+
+-- ============================================================================
+-- ACTIONS
+-- ============================================================================
+
+local function NotMapped()
+    Log("[Build] This feature isn't mapped for the Legacy build yet")
+    Toast("Not supported on the Legacy build yet.")
+end
+
+local function SetGlobalBit(global, bit, enabled)
+    local value = ScriptGlobal.GetInt(global) or 0
+
+    if enabled then
+        value = value | (1 << bit)
+    else
+        value = value & (~(1 << bit))
+    end
+
+    ScriptGlobal.SetInt(global, value)
+end
+
+local function BypassHack(offset, label)
+    if CFG.FINALE_SCRIPT == nil or offset == nil then
+        NotMapped()
+        return
+    end
+
+    if Natives.InvokeInt(NATIVE_THREADS_RUNNING, J(CFG.FINALE_SCRIPT)) == 0 then
+        Log(F("[Bypass] %s not running — start the finale first", CFG.FINALE_SCRIPT))
+        return
+    end
+
+    ScriptLocal.SetInt(J(CFG.FINALE_SCRIPT), offset, HACK_STATE_SUCCESS)
+    Log(F("[Bypass] %s should've been skipped", label))
+end
+
+local function CompleteLaserHack()
+    if CFG.LASER_STATE == nil then
+        NotMapped()
+        return
+    end
+
+    if Natives.InvokeInt(NATIVE_THREADS_RUNNING, LASER_SCRIPT_HASH) == 0 then
+        Log("[Lasers] Laser room not active — press this inside the vault laser room")
+        return
+    end
+
+    local state = ScriptGlobal.GetInt(CFG.LASER_STATE) or 0
+    ScriptGlobal.SetInt(CFG.LASER_STATE, state | 1 | (1 << 4))
+
+    Log("[Lasers] Vault laser grid deactivated (bits 0,4)")
+end
+
+local function ReloadBoard()
+    if CFG.BOARD_STATE == nil then
+        Log("[Board] Auto-reload not mapped for Legacy — step out of the art room and back in")
+        Toast("Re-enter the art room to refresh the board.")
+        return
+    end
+
+    if Natives.InvokeInt(NATIVE_THREADS_RUNNING, PLANNING_SCRIPT_HASH) == 0 then
+        Log("[Board] Planning board is not open or nearby")
+        return
+    end
+
+    local currentState = ScriptGlobal.GetInt(CFG.BOARD_STATE) or 0
+    local previousState = currentState
+
+    if previousState < 1 or previousState > 5 then
+        previousState = BOARD_ACTIVE_STATE_FALLBACK
+    end
+
+    ScriptGlobal.SetInt(CFG.BOARD_PREV_STATE, previousState)
+    SetGlobalBit(CFG.BOARD_DIRTY_FLAGS, previousState, true)
+    SetGlobalBit(CFG.BOARD_DONE_FLAGS, previousState, false)
+    SetGlobalBit(CFG.BOARD_INIT_FLAGS, BOARD_REFRESH_BLOCKED_BIT, false)
+    ScriptGlobal.SetInt(CFG.BOARD_STATE, BOARD_REBUILD_STATE)
+    ScriptGlobal.SetInt(CFG.BOARD_ACTIVE, 1)
+
+    Log(F("[Board] Planning board refresh requested from state %d", currentState))
+end
+
+-- ============================================================================
+-- FEATURES
+-- ============================================================================
+
 local Ftr = {}
 
 Ftr.ScopeOut = AddFeature({
@@ -296,7 +333,29 @@ Ftr.ScopeOut = AddFeature({
         SetInt(STAT_SCOPING_BS, -1)
         SetInt(STAT_POI_BS, -1)
         ReloadBoard()
-        Log("[Scoping] Scope-out completed (SCOPING_BS = -1, POI_BS = -1) ")
+        Log("[Scoping] Scope-out completed (SCOPING_BS = -1, POI_BS = -1)")
+    end
+})
+
+Ftr.CompleteAll = AddFeature({
+    id   = "Complete_All",
+    name = "Complete ALL Preps",
+    type = eFeatureType.Button,
+    desc = "Prep skip: scopes everything, completes every prep incl. all 3 unmarked weapon loadouts (Street/Security/Military) and applies the selected target.",
+    func = function()
+        local name = GetComboName(Ftr.PrimaryTarget)
+
+        SetInt(STAT_GENERAL_BS, -1)
+        SetInt(STAT_GENERAL_BS2, -1)
+        SetInt(STAT_ROBBERY_PROG, -1)
+        SetInt(STAT_SCOPING_BS, -1)
+        SetInt(STAT_POI_BS, -1)
+
+        SetInt(STAT_COOLDOWN, 0)
+        SetInt(STAT_COOLDOWN_HARD, 0)
+        ReloadBoard()
+
+        Log(F("[Preps] ALL preps completed — target «%s»", name))
     end
 })
 
@@ -318,11 +377,9 @@ Ftr.GetTarget = AddFeature({
 
         if id >= 0 and id <= 26 then
             SetComboIndex(Ftr.PrimaryTarget, id)
-            Log(F("[Target] Current primary target: «%s» (id %d) ", LIST_PRIMARY_TARGETS[id + 1], id))
-            Toast(F("Current: %s", LIST_PRIMARY_TARGETS[id + 1]))
+            Log(F("[Target] Current primary target: «%s» (id %d)", LIST_PRIMARY_TARGETS[id + 1], id))
         else
-            Log(F("[Target] Unknown target id %d ", id))
-            Toast(F("Unknown target id %d.", id))
+            Log(F("[Target] Unknown target id %d", id))
         end
     end
 })
@@ -331,13 +388,12 @@ Ftr.ApplyTarget = AddFeature({
     id   = "Apply_Target",
     name = "Apply Primary Target",
     type = eFeatureType.Button,
-    desc = "Writes the selected primary target. Re-enter the art room to refresh the board.",
+    desc = "Writes the selected primary target.",
     func = function()
         local name, index = GetComboName(Ftr.PrimaryTarget)
         SetInt(STAT_HEIST_TARGET, index)
         ReloadBoard()
         Log(F("[Target] Primary target set to «%s» (id %d)", name, index))
-        Toast(F("Target: %s", name))
     end
 })
 
@@ -345,40 +401,15 @@ Ftr.ReloadPlanningBoard = AddFeature({
     id   = "Reload_Planning_Board",
     name = "Reload Planning Board",
     type = eFeatureType.Button,
-    desc = "Refreshes the planning board after changing targets, preps, or buyer requests..",
+    desc = "Refreshes the planning board.",
     func = function()
-        ReloadPlanningBoard()
-    end
-})
-
-Ftr.CompleteAll = AddFeature({
-    id   = "Complete_All",
-    name = "Complete ALL Preps",
-    type = eFeatureType.Button,
-    desc = "Prep skip: scopes everything, completes every prep incl. all 3 unmarked weapon loadouts (Street/Security/Military) and applies the selected target. Re-enter the art room to refresh the board.",
-    func = function()
-        local name, index = GetComboName(Ftr.PrimaryTarget)
-
-        --OrInt(STAT_GENERAL_BS, MASK_COMPLETE_ALL)
-
-        SetInt(STAT_GENERAL_BS, -1)
-        SetInt(STAT_GENERAL_BS2, -1)
-        SetInt(STAT_ROBBERY_PROG, -1)
-        SetInt(STAT_SCOPING_BS, -1)
-        SetInt(STAT_POI_BS, -1)
-
-        SetInt(STAT_COOLDOWN, 0)
-        SetInt(STAT_COOLDOWN_HARD, 0)
         ReloadBoard()
-
-        Log(F("[Preps] ALL preps completed — target «%s» ", name))
-        Toast("All preps done.")
     end
 })
 
 Ftr.LootSlot1 = AddFeature({
     id   = "Loot_Slot_1",
-    name = "Buyer Request 1",
+    name = "#1",
     type = eFeatureType.Combo,
     desc = "First buyer-requested item.",
     list = LIST_LOOT_ITEMS
@@ -386,7 +417,7 @@ Ftr.LootSlot1 = AddFeature({
 
 Ftr.LootSlot2 = AddFeature({
     id   = "Loot_Slot_2",
-    name = "Buyer Request 2",
+    name = "#2",
     type = eFeatureType.Combo,
     desc = "Second buyer-requested item.",
     list = LIST_LOOT_ITEMS
@@ -394,7 +425,7 @@ Ftr.LootSlot2 = AddFeature({
 
 Ftr.LootSlot3 = AddFeature({
     id   = "Loot_Slot_3",
-    name = "Buyer Request 3",
+    name = "#3",
     type = eFeatureType.Combo,
     desc = "Third buyer-requested item.",
     list = LIST_LOOT_ITEMS
@@ -404,7 +435,7 @@ Ftr.ApplyLoot = AddFeature({
     id   = "Apply_Loot",
     name = "Apply Buyer Requests",
     type = eFeatureType.Button,
-    desc = "Apply this AFTER your final scope",
+    desc = "Apply this AFTER your final scope.",
     func = function()
         local mask  = 0
         local names = {}
@@ -420,8 +451,7 @@ Ftr.ApplyLoot = AddFeature({
         SetInt(STAT_BUYREQ_BS, mask)
         SetInt(STAT_STOLENLAST_BS, 0)
         ReloadBoard()
-        Log(F("[Loot] Buyer requests applied: %s (mask 0x%X) ", (#names > 0) and table.concat(names, ", ") or "none", mask))
-        Toast("Buyer requests applied.")
+        Log(F("[Loot] Buyer requests applied: %s (mask 0x%X)", (#names > 0) and table.concat(names, ", ") or "none", mask))
     end
 })
 
@@ -429,10 +459,10 @@ Ftr.OwnAllPaintings = AddFeature({
     id   = "Own_All_Paintings",
     name = "Own ALL Mansion Paintings",
     type = eFeatureType.Button,
-    desc = "Marks every painting as owned/collected  so the full mansion gallery is kept. Owned paintings count as already stolen",
+    desc = "Marks every painting as owned/collected so the full mansion gallery is kept. Owned paintings count as already stolen.",
     func = function()
         SetInt(STAT_TARGETS_OWNED, -1)
-        Log("[Paintings] All mansion paintings owned (TARGETS_OWNED_BS = -1) ")
+        Log("[Paintings] All mansion paintings owned (TARGETS_OWNED_BS = -1)")
         Toast("All mansion paintings owned.")
     end
 })
@@ -444,41 +474,10 @@ Ftr.ResetPaintings = AddFeature({
     desc = "Clears the owned-paintings & restores first-steal bonuses and full target rotation.",
     func = function()
         SetInt(STAT_TARGETS_OWNED, 0)
-        Log("[Paintings] Owned paintings reset (TARGETS_OWNED_BS = 0) ")
+        Log("[Paintings] Owned paintings reset (TARGETS_OWNED_BS = 0)")
         Toast("Owned paintings reset.")
     end
 })
-
-Ftr.ForceSetup = AddFeature({
-    id   = "Force_Setup",
-    name = "Force Setup Heist (aggressive)",
-    type = eFeatureType.Button,
-    desc = "Sledgehammer: sets every K26 bitset to -1, rolls a seed and clears cooldowns. Use if the normal prep skip isn't enough.",
-    func = function()
-        local name, index = GetComboName(Ftr.PrimaryTarget)
-
-        Script.QueueJob(function()
-            SetInt(STAT_GENERAL_BS, -1)
-            SetInt(STAT_GENERAL_BS2, -1)
-            SetInt(STAT_ROBBERY_PROG, -1)
-            SetInt(STAT_SCOPING_BS, -1)
-            SetInt(STAT_POI_BS, -1)
-            SetInt(STAT_BUYREQ_BS, -1)
-            SetInt(STAT_TARGETS_OWNED, -1)
-            -- SetInt(STAT_HEIST_SEED, math.random(0, 2147483646))
-            -- SetInt(STAT_COOLDOWN, 0)
-            -- SetInt(STAT_COOLDOWN_HARD, 0)
-
-            Script.Yield(500)
-
-            ReloadBoard()
-            Log(F("[Setup] Forced heist setup with target «%s» ", name))
-            Toast("Forced setup done.")
-        end)
-    end
-})
-
-
 
 Ftr.BypassFingerprint = AddFeature({
     id   = "Bypass_Fingerprint",
@@ -486,17 +485,7 @@ Ftr.BypassFingerprint = AddFeature({
     type = eFeatureType.Button,
     desc = "Instantly completes the fingerprint hack. Press it WHILE the minigame is on screen.",
     func = function()
-        BypassHack(LOCAL_FINGERPRINT_STATE, "Fingerprint hack")
-    end
-})
-
-Ftr.BypassVault = AddFeature({
-    id   = "Bypass_Vault",
-    name = "Bypass Vault Hack",
-    type = eFeatureType.Button,
-    desc = "Instantly completes the vault door/keypad hack. Press it WHILE the minigame is on screen.",
-    func = function()
-        BypassHack(LOCAL_VAULT_HACK_STATE, "Vault hack")
+        BypassHack(CFG.FINGERPRINT_STATE, "Fingerprint hack")
     end
 })
 
@@ -510,6 +499,16 @@ Ftr.CompleteLaser = AddFeature({
     end
 })
 
+Ftr.BypassVault = AddFeature({
+    id   = "Bypass_Vault",
+    name = "Bypass Vault Hack",
+    type = eFeatureType.Button,
+    desc = "Instantly completes the vault door/keypad hack. Press it WHILE the minigame is on screen.",
+    func = function()
+        BypassHack(CFG.VAULT_HACK_STATE, "Vault hack")
+    end
+})
+
 Ftr.ClearCooldowns = AddFeature({
     id   = "Clear_Cooldowns",
     name = "Clear Cooldowns",
@@ -518,8 +517,7 @@ Ftr.ClearCooldowns = AddFeature({
     func = function()
         SetInt(STAT_COOLDOWN, 0)
         SetInt(STAT_COOLDOWN_HARD, 0)
-        Log("[Cooldown] Kortz cooldowns cleared ")
-        Toast("Cooldowns cleared.")
+        Log("[Cooldown] Kortz cooldowns cleared")
     end
 })
 
@@ -527,11 +525,10 @@ Ftr.WeeklyBoost = AddFeature({
     id   = "Weekly_Boost",
     name = "Enable Weekly Boost",
     type = eFeatureType.Button,
-    desc = "Sets MPX_WEEKLY_BOOST_BS to all bits.",
+    desc = "Enables the weekly boost which increases hugely the primary targets prices. USE WITH CAUTION",
     func = function()
         SetInt(STAT_WEEKLY_BOOST, 1)
-        Log("[Boost] Weekly boost enabled (WEEKLY_BOOST_BS = -1) ")
-        Toast("Weekly boost enabled.")
+        Log("[Boost] Weekly boost enabled (WEEKLY_BOOST_BS = 1)")
     end
 })
 
@@ -549,8 +546,7 @@ Ftr.UnlockAwards = AddFeature({
             end
         end
 
-        Log(F("[Awards] %d Kortz awards unlocked ", #KORTZ_AWARDS))
-        Toast("Kortz awards unlocked.")
+        Log(F("[Awards] %d Kortz awards unlocked", #KORTZ_AWARDS))
     end
 })
 
@@ -568,10 +564,13 @@ Ftr.ResetAwards = AddFeature({
             end
         end
 
-        Log(F("[Awards] %d Kortz awards reset ", #KORTZ_AWARDS))
-        Toast("Kortz awards reset.")
+        Log(F("[Awards] %d Kortz awards reset", #KORTZ_AWARDS))
     end
 })
+
+-- ============================================================================
+-- UI
+-- ============================================================================
 
 local COL_MUTED = { 0.60, 0.60, 0.60, 1.00 }
 
@@ -580,7 +579,7 @@ local function Muted(text)
 end
 
 local function RenderKortzTab()
-    Muted("Kortz Heist Helper by Forlax")
+    Muted(F("Heist Helper by Forlax  [%s]", IS_EE and "Enhanced" or "Legacy"))
     ImGui.Separator()
 
     if ImGui.BeginTable("KHT_Columns", 2, ImGuiTableFlags.SizingStretchSame) then
@@ -599,10 +598,8 @@ local function RenderKortzTab()
             ImGui.SameLine()
             ClickGUI.RenderFeature(Ftr.ApplyTarget.hash)
             ClickGUI.RenderFeature(Ftr.ReloadPlanningBoard.hash)
-
             ClickGUI.EndCustomChildWindow()
         end
-
 
         if ClickGUI.BeginCustomChildWindow("Mansion Paintings") then
             ClickGUI.RenderFeature(Ftr.OwnAllPaintings.hash)
@@ -612,7 +609,8 @@ local function RenderKortzTab()
 
         if ClickGUI.BeginCustomChildWindow("Heist Minigames") then
             ClickGUI.RenderFeature(Ftr.BypassFingerprint.hash)
-			ClickGUI.RenderFeature(Ftr.CompleteLaser.hash)
+            ClickGUI.RenderFeature(Ftr.CompleteLaser.hash)
+            ImGui.SameLine()
             ClickGUI.RenderFeature(Ftr.BypassVault.hash)
             ClickGUI.EndCustomChildWindow()
         end
@@ -629,6 +627,7 @@ local function RenderKortzTab()
 
         if ClickGUI.BeginCustomChildWindow("Misc") then
             ClickGUI.RenderFeature(Ftr.ClearCooldowns.hash)
+            ImGui.SameLine()
             ClickGUI.RenderFeature(Ftr.WeeklyBoost.hash)
             ClickGUI.EndCustomChildWindow()
         end
@@ -646,5 +645,5 @@ end
 
 ClickGUI.AddTab(SCRIPT_TITLE, RenderKortzTab)
 
-Log("Kortz Heist Helper by Forlax loaded")
-Toast("Kortz Heist Helper by Forlax")
+Log(F("Kortz Heist Helper by Forlax loaded (%s build)", IS_EE and "Enhanced" or "Legacy"))
+Toast("Helper by Forlax")
