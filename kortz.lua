@@ -13,8 +13,8 @@ local IS_EE   = (EDITION == "EE")
 
 local EE = {
     FINALE_SCRIPT     = "fm_mission_controller_v3",
-    FINGERPRINT_STATE = 26866,     
-    VAULT_HACK_STATE  = 27914,     
+    FINGERPRINT_STATE = 26866,
+    VAULT_HACK_STATE  = 27914,
     LASER_STATE       = 1935711,   -- Global_1935711
     BOARD_STATE       = 1981302,   -- Global_1980570.f_732
     BOARD_PREV_STATE  = 1981303,   -- .f_1
@@ -65,6 +65,21 @@ local BOARD_REBUILD_STATE         = 1
 local BOARD_ACTIVE_STATE_FALLBACK = 4
 
 local NATIVE_THREADS_RUNNING = 0x2C83A9DA6BFFC4F9
+
+local NATIVE_PLAYER_PED_ID   = 0xD80958FC74E988A6
+local NATIVE_GET_ENT_COORDS  = 0x3FEF770D40960D5A -- GET_ENTITY_COORDS
+local NATIVE_GET_ENT_HEADING = 0xE83D4F9BA2A38914 -- GET_ENTITY_HEADING
+local NATIVE_SET_ENT_COORDS  = 0x239A3351AC1DA385 -- SET_ENTITY_COORDS_NO_OFFSET
+local NATIVE_SET_ENT_HEADING = 0x8E2530AA8ADA980E -- SET_ENTITY_HEADING
+local NATIVE_GET_INTERIOR    = 0x2107BA504071A6BB -- GET_INTERIOR_FROM_ENTITY
+local NATIVE_GET_INTERIOR_AT_COORDS = 0xB0F7F8663821D9C3 -- GET_INTERIOR_AT_COORDS
+
+local TP_POINTS = {
+    { "CCTV Server Room", 2625.7615, 5907.5127, -61.0001, 77.6  },
+    { "Green Powerbox",   2636.9795, 5862.7124, -61.0001, 270.5 },
+    { "Staff Room",       2591.5691, 5927.6030, -48.9999, 89.1  },
+    { "Sale Spot",        734.5290, -1934.7460, 29.2877,  23.2, true }
+}
 
 local LIST_PRIMARY_TARGETS = {
     "La Dernière Débauche",
@@ -316,6 +331,35 @@ local function ReloadBoard()
     Log(F("[Board] Planning board refresh requested from state %d", currentState))
 end
 
+local function MyPed()
+    return Natives.InvokeInt(NATIVE_PLAYER_PED_ID)
+end
+
+local function LogCoords()
+    local ped = MyPed()
+    local x, y, z = Natives.InvokeV3(NATIVE_GET_ENT_COORDS, ped, false)
+    local heading = Natives.InvokeFloat(NATIVE_GET_ENT_HEADING, ped)
+    local interior = Natives.InvokeInt(NATIVE_GET_INTERIOR, ped)
+
+    Log(F("[Coords] x=%.3f y=%.3f z=%.3f heading=%.1f interior=%d", x, y, z, heading, interior))
+    Log(F("[Coords] paste-ready: { \"Name\", %.4f, %.4f, %.4f, %.1f },", x, y, z, heading))
+    Toast(F("Coords logged (interior %d).", interior))
+end
+
+local function TeleportTo(x, y, z, heading, openWorld)
+    if not openWorld and Natives.InvokeInt(NATIVE_GET_INTERIOR_AT_COORDS, x, y, z) == 0 then
+        Log("[TP] Destination interior isn't loaded — go inside the heist first (would drop you in the void)")
+        Toast("Not inside the heist — TP skipped.")
+        return
+    end
+
+    local ped = MyPed()
+    Natives.InvokeVoid(NATIVE_SET_ENT_COORDS, ped, x, y, z, false, false, false)
+    if heading then
+        Natives.InvokeVoid(NATIVE_SET_ENT_HEADING, ped, heading)
+    end
+end
+
 -- ============================================================================
 -- FEATURES
 -- ============================================================================
@@ -530,6 +574,31 @@ Ftr.WeeklyBoost = AddFeature({
     end
 })
 
+Ftr.TpButtons = {}
+for i, p in ipairs(TP_POINTS) do
+    Ftr.TpButtons[i] = AddFeature({
+        id   = "TP_Go_" .. i,
+        name = p[1],
+        type = eFeatureType.Button,
+        desc = F("Teleport to %s. Use INSIDE the heist (the interior must be loaded).", p[1]),
+        func = function()
+            TeleportTo(p[2], p[3], p[4], p[5], p[6])
+            Log(F("[TP] Teleported to «%s» (%.1f, %.1f, %.1f)", p[1], p[2], p[3], p[4]))
+            Toast(F("Teleported to %s.", p[1]))
+        end
+    })
+end
+
+Ftr.LogCoords = AddFeature({
+    id   = "Log_Coords",
+    name = "Log My Coords",
+    type = eFeatureType.Button,
+    desc = "Debug: logs your current position, heading and interior id. Paste the logged line into TP_POINTS at the top to add a new destination.",
+    func = function()
+        LogCoords()
+    end
+})
+
 Ftr.UnlockAwards = AddFeature({
     id   = "Unlock_Awards",
     name = "Unlock Awards",
@@ -620,6 +689,17 @@ local function RenderKortzTab()
             ClickGUI.RenderFeature(Ftr.LootSlot2.hash)
             ClickGUI.RenderFeature(Ftr.LootSlot3.hash)
             ClickGUI.RenderFeature(Ftr.ApplyLoot.hash)
+            ClickGUI.EndCustomChildWindow()
+        end
+
+        if ClickGUI.BeginCustomChildWindow("Teleports") then
+            for i, btn in ipairs(Ftr.TpButtons) do
+                ClickGUI.RenderFeature(btn.hash)
+                if i % 2 == 1 and i < #Ftr.TpButtons then
+                    ImGui.SameLine()
+                end
+            end
+            -- ClickGUI.RenderFeature(Ftr.LogCoords.hash)
             ClickGUI.EndCustomChildWindow()
         end
 
