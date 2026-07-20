@@ -16,6 +16,8 @@ local EE = {
     FINGERPRINT_STATE = 26866,
     VAULT_HACK_STATE  = 27914,
     LASER_STATE       = 1935711,   -- Global_1935711
+    PAINT_STATE       = 29366,     -- primary: 15 then 17 + accept; secondary: 3 + tap
+    LASER_LOCAL       = 70416,     -- alt laser method: local mask (+ LASER_STATE global = 1)
     BOARD_STATE       = 1981302,   -- Global_1980570.f_732
     BOARD_PREV_STATE  = 1981303,   -- .f_1
     BOARD_DONE_FLAGS  = 1981305,   -- .f_3
@@ -29,6 +31,7 @@ local LE = {
     FINGERPRINT_STATE = 26464,
     VAULT_HACK_STATE  = 27512,
     LASER_STATE       = 1935234,   -- Global_1935234
+    PAINT_STATE       = 28964,     -- iLocal_28953 + 11
     BOARD_STATE       = 1980023,   -- Global_1979291.f_732
     BOARD_PREV_STATE  = 1980024,
     BOARD_DONE_FLAGS  = 1980026,
@@ -73,6 +76,13 @@ local NATIVE_SET_ENT_COORDS  = 0x239A3351AC1DA385 -- SET_ENTITY_COORDS_NO_OFFSET
 local NATIVE_SET_ENT_HEADING = 0x8E2530AA8ADA980E -- SET_ENTITY_HEADING
 local NATIVE_GET_INTERIOR    = 0x2107BA504071A6BB -- GET_INTERIOR_FROM_ENTITY
 local NATIVE_GET_INTERIOR_AT_COORDS = 0xB0F7F8663821D9C3 -- GET_INTERIOR_AT_COORDS
+local NATIVE_SET_CONTROL_VALUE = 0xE8A25867FBA3B05E -- SET_CONTROL_VALUE_NEXT_FRAME
+local NATIVE_ENABLE_CONTROL    = 0x351220255D64C155 -- ENABLE_CONTROL_ACTION
+
+local CONTROL_ACCEPT    = 237
+local CONTROL_SECONDARY = 219
+
+local LASER_LOCAL_VALUE = 4294784
 
 local TP_POINTS = {
     { "CCTV Server Room", 2625.7615, 5907.5127, -61.0001, 77.6  },
@@ -221,7 +231,10 @@ local function AddFeature(def)
 
     FeatureMgr.AddFeature(def.hash, def.name, def.type, def.desc or "", function(f)
         if def.func then
-            def.func(f)
+            local ok, err = pcall(def.func, f)
+            if not ok then
+                Log(F("[Error] %s: %s", def.name or "?", tostring(err)))
+            end
         end
     end)
 
@@ -286,6 +299,7 @@ local function BypassHack(offset, label)
     Log(F("[Bypass] %s should've been skipped", label))
 end
 
+-- My original laser method (used on LE): fmmc_lasers global bits 0|4.
 local function CompleteLaserHack()
     if CFG.LASER_STATE == nil then
         NotMapped()
@@ -301,6 +315,65 @@ local function CompleteLaserHack()
     ScriptGlobal.SetInt(CFG.LASER_STATE, state | 1 | (1 << 4))
 
     Log("[Lasers] Vault laser grid deactivated (bits 0,4)")
+end
+
+local function FinaleActive(offset)
+    if offset == nil then
+        NotMapped()
+        return false
+    end
+    if Natives.InvokeInt(NATIVE_THREADS_RUNNING, J(CFG.FINALE_SCRIPT)) == 0 then
+        Log("[Heist] Finale not running — start the heist finale first")
+        return false
+    end
+    return true
+end
+
+local function TapControl(control)
+    Natives.InvokeVoid(NATIVE_ENABLE_CONTROL, 0, control, true)
+    Natives.InvokeBool(NATIVE_SET_CONTROL_VALUE, 0, control, 1.0)
+end
+
+local function SetFinaleLocal(offset, value)
+    ScriptLocal.SetInt(J(CFG.FINALE_SCRIPT), offset, value)
+end
+
+local function CompleteLaserHackAlt()
+    if not FinaleActive(CFG.LASER_LOCAL) then return end
+    if CFG.LASER_STATE == nil then NotMapped() return end
+
+    SetFinaleLocal(CFG.LASER_LOCAL, LASER_LOCAL_VALUE)
+    ScriptGlobal.SetInt(CFG.LASER_STATE, 1)
+
+    Log("[Lasers] Alt method applied (local mask + global bit 0)")
+end
+
+local function RemoveLasers()
+    if IS_EE then
+        CompleteLaserHackAlt()
+    else
+        CompleteLaserHack()
+    end
+end
+
+local function TakePrimaryTarget()
+    if not FinaleActive(CFG.PAINT_STATE) then return end
+
+    Script.QueueJob(function()
+        SetFinaleLocal(CFG.PAINT_STATE, 15)
+        SetFinaleLocal(CFG.PAINT_STATE, 17)
+        Script.Yield(1000)
+        TapControl(CONTROL_ACCEPT)
+        Log("[Theft] Primary target taken")
+    end)
+end
+
+local function TakeSecondaryTarget()
+    if not FinaleActive(CFG.PAINT_STATE) then return end
+
+    SetFinaleLocal(CFG.PAINT_STATE, 3)
+    TapControl(CONTROL_SECONDARY)
+    Log("[Theft] Secondary target taken")
 end
 
 local function ReloadBoard()
@@ -349,7 +422,6 @@ end
 local function TeleportTo(x, y, z, heading, openWorld)
     if not openWorld and Natives.InvokeInt(NATIVE_GET_INTERIOR_AT_COORDS, x, y, z) == 0 then
         Log("[TP] Destination interior isn't loaded — go inside the heist first (would drop you in the void)")
-        Toast("Not inside the heist — TP skipped.")
         return
     end
 
@@ -381,7 +453,7 @@ Ftr.ScopeOut = AddFeature({
 
 Ftr.CompleteAll = AddFeature({
     id   = "Complete_All",
-    name = "Complete ALL Preps",
+    name = "Complete Preps",
     type = eFeatureType.Button,
     desc = "Prep skip: scopes everything, completes every prep incl. all 3 unmarked weapon loadouts (Street/Security/Military) and applies the selected target.",
     func = function()
@@ -499,7 +571,7 @@ Ftr.ApplyLoot = AddFeature({
 
 Ftr.OwnAllPaintings = AddFeature({
     id   = "Own_All_Paintings",
-    name = "Own ALL Mansion Paintings",
+    name = "Own ALL",
     type = eFeatureType.Button,
     desc = "Marks every painting as owned/collected so the full mansion gallery is kept. Owned paintings count as already stolen.",
     func = function()
@@ -511,7 +583,7 @@ Ftr.OwnAllPaintings = AddFeature({
 
 Ftr.ResetPaintings = AddFeature({
     id   = "Reset_Paintings",
-    name = "Reset Owned Paintings",
+    name = "Reset Owned",
     type = eFeatureType.Button,
     desc = "Clears the owned-paintings & restores first-steal bonuses and full target rotation.",
     func = function()
@@ -523,7 +595,7 @@ Ftr.ResetPaintings = AddFeature({
 
 Ftr.BypassFingerprint = AddFeature({
     id   = "Bypass_Fingerprint",
-    name = "Bypass Fingerprint Hack",
+    name = "Fingerprint Hack",
     type = eFeatureType.Button,
     desc = "Instantly completes the fingerprint hack. Press it WHILE the minigame is on screen.",
     func = function()
@@ -535,19 +607,39 @@ Ftr.CompleteLaser = AddFeature({
     id   = "Complete_Laser",
     name = "Remove Lasers",
     type = eFeatureType.Button,
-    desc = "Press it WHILE inside the laser room.",
+    desc = "Disables the vault laser grid. Press it in the laser room / finale.",
     func = function()
-        CompleteLaserHack()
+        RemoveLasers()
     end
 })
 
 Ftr.BypassVault = AddFeature({
     id   = "Bypass_Vault",
-    name = "Bypass Vault Hack",
+    name = "Vault Hack",
     type = eFeatureType.Button,
     desc = "Instantly completes the vault door/keypad hack. Press it WHILE the minigame is on screen.",
     func = function()
         BypassHack(CFG.VAULT_HACK_STATE, "Vault hack")
+    end
+})
+
+Ftr.TakePrimary = AddFeature({
+    id   = "Take_Primary",
+    name = "Take Primary",
+    type = eFeatureType.Button,
+    desc = "Instantly takes the primary target painting (skips the minigame). Press while stealing... (Enhanced only.)",
+    func = function()
+        TakePrimaryTarget()
+    end
+})
+
+Ftr.TakeSecondary = AddFeature({
+    id   = "Take_Secondary",
+    name = "Take Secondary",
+    type = eFeatureType.Button,
+    desc = "Instantly takes the secondary targets (Paintings). Press while stealing... (Enhanced only.)",
+    func = function()
+        TakeSecondaryTarget()
     end
 })
 
@@ -584,7 +676,6 @@ for i, p in ipairs(TP_POINTS) do
         func = function()
             TeleportTo(p[2], p[3], p[4], p[5], p[6])
             Log(F("[TP] Teleported to «%s» (%.1f, %.1f, %.1f)", p[1], p[2], p[3], p[4]))
-            Toast(F("Teleported to %s.", p[1]))
         end
     })
 end
@@ -655,6 +746,7 @@ local function RenderKortzTab()
 
         if ClickGUI.BeginCustomChildWindow("Preparations") then
             ClickGUI.RenderFeature(Ftr.ScopeOut.hash)
+            ImGui.SameLine()
             ClickGUI.RenderFeature(Ftr.CompleteAll.hash)
             ClickGUI.EndCustomChildWindow()
         end
@@ -670,15 +762,23 @@ local function RenderKortzTab()
 
         if ClickGUI.BeginCustomChildWindow("Mansion Paintings") then
             ClickGUI.RenderFeature(Ftr.OwnAllPaintings.hash)
+            ImGui.SameLine()
             ClickGUI.RenderFeature(Ftr.ResetPaintings.hash)
             ClickGUI.EndCustomChildWindow()
         end
 
         if ClickGUI.BeginCustomChildWindow("Heist Minigames") then
             ClickGUI.RenderFeature(Ftr.BypassFingerprint.hash)
-            ClickGUI.RenderFeature(Ftr.CompleteLaser.hash)
             ImGui.SameLine()
             ClickGUI.RenderFeature(Ftr.BypassVault.hash)
+            ClickGUI.RenderFeature(Ftr.CompleteLaser.hash)
+
+            if IS_EE then
+                ClickGUI.RenderFeature(Ftr.TakePrimary.hash)
+                ImGui.SameLine()
+                ClickGUI.RenderFeature(Ftr.TakeSecondary.hash)
+            end
+
             ClickGUI.EndCustomChildWindow()
         end
 
@@ -699,7 +799,7 @@ local function RenderKortzTab()
                     ImGui.SameLine()
                 end
             end
-            -- ClickGUI.RenderFeature(Ftr.LogCoords.hash)
+            --ClickGUI.RenderFeature(Ftr.LogCoords.hash)
             ClickGUI.EndCustomChildWindow()
         end
 
