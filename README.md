@@ -4,7 +4,7 @@ A [Cherax](https://cherax.menu/) Lua script for the new **Kortz Center Heist**.
 
 <img width="586" height="540" alt="image" src="https://github.com/user-attachments/assets/47941cf5-f2a2-45c9-96ff-2bd2ed1c33f8" />
 
-> **Heads up:** this is my first script, expect bugs and design ugliness 😅! This has been tested on EE only tho.
+> **Heads up:** this is my first script, expect bugs and design ugliness 😅!
 
 ## Features
 
@@ -42,16 +42,11 @@ A [Cherax](https://cherax.menu/) Lua script for the new **Kortz Center Heist**.
    game thinks you've started; applying stats before buying the heist does nothing
    (or leaves the board in a weird state)
 2. Pick your primary target (Optional if you wanna switch it), press **Complete ALL Preps**
-3. **Step out of the art room (in the mansion) and back in** so the planning board
-   reloads, can't figure out how to make it self reload (maybe some can help with that?)
-4. During the finale, use the **Heist Minigames** buttons when you reach each hack / the laser room
-5. Profit! 
+3. During the finale, use the **Heist Minigames** buttons when you reach each hack / the laser room
+4. Profit! 
 
 ## Notes
 
-- **Board refresh is currently manual**: automatic board reloading is bugged, so after
-  applying anything the planning board will NOT update on its own. Leave the art room
-  in the mansion, walk back in, and the board will show your changes
 - The **Heist Minigames** buttons only work while you're actually in the finale: press
   each hack bypass WHILE its minigame is on screen, and Disable Vault Lasers inside the
   laser room
