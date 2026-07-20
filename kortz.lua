@@ -34,6 +34,8 @@ local LE = {
     VAULT_HACK_STATE  = 27512,
     LASER_STATE       = 1935234,   -- Global_1935234
     PAINT_STATE       = 28964,     -- iLocal_28953 + 11
+    L2_LOOT_BASE      = 4980736 + 1 + 29174, -- Global_4980736.f_29174 cases, stride 333 (SAME as EE, verified)
+    BAG_CAPACITY      = 262145 + 37438,      -- Global_262145.f_37438 bag capacity (default 100)
     BOARD_STATE       = 1980023,   -- Global_1979291.f_732
     BOARD_PREV_STATE  = 1980024,
     BOARD_DONE_FLAGS  = 1980026,
@@ -341,8 +343,6 @@ local function FinaleActive(offset)
 end
 
 local function TapControl(control)
-    -- Enable first: minigames disable most controls, and SET_CONTROL_VALUE alone
-    -- often won't register on a disabled control.
     Natives.InvokeVoid(NATIVE_ENABLE_CONTROL, 0, control, true)
     Natives.InvokeBool(NATIVE_SET_CONTROL_VALUE, 0, control, 1.0)
 end
@@ -717,12 +717,12 @@ Ftr.WeeklyBoost = AddFeature({
         Log("[Boost] Weekly boost enabled (WEEKLY_BOOST_BS = 1)")
     end
 })
-
+ 
 Ftr.BagCapacity = AddFeature({
     id   = "Bag_Capacity",
     name = "Fat Bag",
     type = eFeatureType.Toggle,
-    desc = "Raises the heist bag capacity so you can carry far more loot. USE WITH CAUTION.",
+    desc = "Raises the heist bag capacity so you can carry far more loot.  USE WITH CAUTION.",
     func = function(f)
         SetBagCapacity(f:IsToggled())
     end
@@ -836,13 +836,11 @@ local function RenderKortzTab()
             ClickGUI.RenderFeature(Ftr.BypassVault.hash)
             ClickGUI.RenderFeature(Ftr.CompleteLaser.hash)
 
-            if IS_EE then
-                ImGui.SameLine()
-                ClickGUI.RenderFeature(Ftr.SoloLoot.hash)
-                ClickGUI.RenderFeature(Ftr.TakePrimary.hash)
-                ImGui.SameLine()
-                ClickGUI.RenderFeature(Ftr.TakeSecondary.hash)
-            end
+            ImGui.SameLine()
+            ClickGUI.RenderFeature(Ftr.SoloLoot.hash)
+            ClickGUI.RenderFeature(Ftr.TakePrimary.hash)
+            ImGui.SameLine()
+            ClickGUI.RenderFeature(Ftr.TakeSecondary.hash)
 
             ClickGUI.EndCustomChildWindow()
         end
@@ -872,9 +870,7 @@ local function RenderKortzTab()
             ClickGUI.RenderFeature(Ftr.ClearCooldowns.hash)
             ImGui.SameLine()
             ClickGUI.RenderFeature(Ftr.WeeklyBoost.hash)
-            if IS_EE then
-                ClickGUI.RenderFeature(Ftr.BagCapacity.hash)
-            end
+            ClickGUI.RenderFeature(Ftr.BagCapacity.hash)
             ClickGUI.EndCustomChildWindow()
         end
 
