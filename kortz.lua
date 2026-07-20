@@ -16,8 +16,9 @@ local EE = {
     FINGERPRINT_STATE = 26866,
     VAULT_HACK_STATE  = 27914,
     LASER_STATE       = 1935711,   -- Global_1935711
-    PAINT_STATE       = 29366,     -- primary: 15 then 17 + accept; secondary: 3 + tap
+    PAINT_STATE       = 29366,     -- primary: 10 then 17 + accept; secondary: 3 + tap
     LASER_LOCAL       = 70416,     -- alt laser method: local mask (+ LASER_STATE global = 1)
+    L2_LOOT_BASE      = 4980736 + 1 + 29174, -- Global_4980736.f_29174 cases, stride 333
     BOARD_STATE       = 1981302,   -- Global_1980570.f_732
     BOARD_PREV_STATE  = 1981303,   -- .f_1
     BOARD_DONE_FLAGS  = 1981305,   -- .f_3
@@ -79,10 +80,15 @@ local NATIVE_GET_INTERIOR_AT_COORDS = 0xB0F7F8663821D9C3 -- GET_INTERIOR_AT_COOR
 local NATIVE_SET_CONTROL_VALUE = 0xE8A25867FBA3B05E -- SET_CONTROL_VALUE_NEXT_FRAME
 local NATIVE_ENABLE_CONTROL    = 0x351220255D64C155 -- ENABLE_CONTROL_ACTION
 
-local CONTROL_ACCEPT    = 237
+local CONTROL_ACCEPT    = 237  -- INPUT_CURSOR_ACCEPT
 local CONTROL_SECONDARY = 219
 
-local LASER_LOCAL_VALUE = 4294784
+local LASER_LOCAL_VALUE = 4294784 -- alt laser method mask
+
+local L2_CASE_STRIDE    = 333
+local L2_FLAG_A         = 68
+local L2_FLAG_B         = 143
+local L2_TARGET_INDICES = { 5, 6, 7, 20, 21 } -- horizontal glass (5-7), artwork (20,21)
 
 local TP_POINTS = {
     { "CCTV Server Room", 2625.7615, 5907.5127, -61.0001, 77.6  },
@@ -141,20 +147,20 @@ local LIST_LOOT_ITEMS = {
     "Ring C",            -- slot 15
     "Egg D",             -- slot 16
     "Bracelet D",        -- slot 17
-    "Painting A",        -- slot 18
-    "Painting B",        -- slot 19
-    "Painting C",        -- slot 20
-    "Painting D",        -- slot 21
-    "Painting E",        -- slot 22
-    "Painting F",        -- slot 23
-    "Painting G",        -- slot 24
-    "Painting H",        -- slot 25
-    "Painting I",        -- slot 26
-    "Painting J",        -- slot 27
-    "Painting K",        -- slot 28
-    "Painting L",        -- slot 29
-    "Painting M",        -- slot 30
-    "Painting N"         -- slot 31
+    "Sod Off (105k)",                     -- slot 18 / Painting A
+    "Cooked (115k)",                      -- slot 19 / Painting B
+    "The Great Circle Back (142k)",       -- slot 20 / Painting C
+    "Dont Forgo These Blueprints (152k)", -- slot 21 / Painting D
+    "Do You See Me (117k)",               -- slot 22 / Painting E
+    "La Duchesse (105k)",                 -- slot 23 / Painting F
+    "Explain Yourself (102k)",            -- slot 24 / Painting G
+    "The Chief (105k)",                   -- slot 25 / Painting H
+    "Canis Hominem Edit (117k)",          -- slot 26 / Painting I
+    "Orange Rush (110k)",                 -- slot 27 / Painting J
+    "Painting K",                         -- slot 28
+    "Painting L",                         -- slot 29
+    "Painting M",                         -- slot 30
+    "Painting N"                          -- slot 31
 }
 
 -- { stat, type, unlock value, reset value }
@@ -324,12 +330,15 @@ local function FinaleActive(offset)
     end
     if Natives.InvokeInt(NATIVE_THREADS_RUNNING, J(CFG.FINALE_SCRIPT)) == 0 then
         Log("[Heist] Finale not running — start the heist finale first")
+        Toast("Not in the heist finale.")
         return false
     end
     return true
 end
 
 local function TapControl(control)
+    -- Enable first: minigames disable most controls, and SET_CONTROL_VALUE alone
+    -- often won't register on a disabled control.
     Natives.InvokeVoid(NATIVE_ENABLE_CONTROL, 0, control, true)
     Natives.InvokeBool(NATIVE_SET_CONTROL_VALUE, 0, control, 1.0)
 end
@@ -346,6 +355,7 @@ local function CompleteLaserHackAlt()
     ScriptGlobal.SetInt(CFG.LASER_STATE, 1)
 
     Log("[Lasers] Alt method applied (local mask + global bit 0)")
+    Toast("Lasers disabled (alt).")
 end
 
 local function RemoveLasers()
@@ -360,11 +370,12 @@ local function TakePrimaryTarget()
     if not FinaleActive(CFG.PAINT_STATE) then return end
 
     Script.QueueJob(function()
-        SetFinaleLocal(CFG.PAINT_STATE, 15)
+        SetFinaleLocal(CFG.PAINT_STATE, 10)
         SetFinaleLocal(CFG.PAINT_STATE, 17)
         Script.Yield(1000)
         TapControl(CONTROL_ACCEPT)
         Log("[Theft] Primary target taken")
+        Toast("Primary target taken.")
     end)
 end
 
@@ -374,6 +385,20 @@ local function TakeSecondaryTarget()
     SetFinaleLocal(CFG.PAINT_STATE, 3)
     TapControl(CONTROL_SECONDARY)
     Log("[Theft] Secondary target taken")
+    Toast("Secondary target taken.")
+end
+
+-- Unlock the restricted Exhibit L2 cases for solo (zero f_68 + f_143).
+local function EnableSoloLoot()
+    if not FinaleActive(CFG.L2_LOOT_BASE) then return end
+
+    for _, i in ipairs(L2_TARGET_INDICES) do
+        local base = CFG.L2_LOOT_BASE + i * L2_CASE_STRIDE
+        ScriptGlobal.SetInt(base + L2_FLAG_A, 0)
+        ScriptGlobal.SetInt(base + L2_FLAG_B, 0)
+    end
+
+    Log("[Loot] Solo secondary targets enabled (L2 cases 5,6,7,20,21)")
 end
 
 local function ReloadBoard()
@@ -422,6 +447,7 @@ end
 local function TeleportTo(x, y, z, heading, openWorld)
     if not openWorld and Natives.InvokeInt(NATIVE_GET_INTERIOR_AT_COORDS, x, y, z) == 0 then
         Log("[TP] Destination interior isn't loaded — go inside the heist first (would drop you in the void)")
+        Toast("Not inside the heist — TP skipped.")
         return
     end
 
@@ -627,7 +653,7 @@ Ftr.TakePrimary = AddFeature({
     id   = "Take_Primary",
     name = "Take Primary",
     type = eFeatureType.Button,
-    desc = "Instantly takes the primary target painting (skips the minigame). Press while stealing... (Enhanced only.)",
+    desc = "Instantly takes the primary target painting (skips the minigame). Press while stealing...",
     func = function()
         TakePrimaryTarget()
     end
@@ -637,9 +663,19 @@ Ftr.TakeSecondary = AddFeature({
     id   = "Take_Secondary",
     name = "Take Secondary",
     type = eFeatureType.Button,
-    desc = "Instantly takes the secondary targets (Paintings). Press while stealing... (Enhanced only.)",
+    desc = "Instantly takes the secondary targets (Paintings). Press while stealing...",
     func = function()
         TakeSecondaryTarget()
+    end
+})
+
+Ftr.SoloLoot = AddFeature({
+    id   = "Solo_Loot",
+    name = "Solo Exhibit L2",
+    type = eFeatureType.Button,
+    desc = "Unlocks the restricted Exhibit L2 loot for solo.",
+    func = function()
+        EnableSoloLoot()
     end
 })
 
@@ -676,6 +712,7 @@ for i, p in ipairs(TP_POINTS) do
         func = function()
             TeleportTo(p[2], p[3], p[4], p[5], p[6])
             Log(F("[TP] Teleported to «%s» (%.1f, %.1f, %.1f)", p[1], p[2], p[3], p[4]))
+            Toast(F("Teleported to %s.", p[1]))
         end
     })
 end
@@ -774,9 +811,11 @@ local function RenderKortzTab()
             ClickGUI.RenderFeature(Ftr.CompleteLaser.hash)
 
             if IS_EE then
+                ImGui.SameLine()
+				ClickGUI.RenderFeature(Ftr.SoloLoot.hash)
                 ClickGUI.RenderFeature(Ftr.TakePrimary.hash)
                 ImGui.SameLine()
-                ClickGUI.RenderFeature(Ftr.TakeSecondary.hash)
+                ClickGUI.RenderFeature(Ftr.TakeSecondary.hash) 
             end
 
             ClickGUI.EndCustomChildWindow()
