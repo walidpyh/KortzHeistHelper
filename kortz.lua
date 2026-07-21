@@ -94,7 +94,7 @@ local BAG_CAPACITY_DEFAULT = 100
 local L2_CASE_STRIDE    = 333
 local L2_FLAG_A         = 68
 local L2_FLAG_B         = 143
-local L2_TARGET_INDICES = { 5, 6, 7, 20, 21 } -- horizontal glass (5-7), artwork (20,21)
+local L2_TARGET_INDICES = { 0, 1, 5, 6, 7, 20, 21 } -- horizontal glass (5-7), artwork (20,21)
 
 local TP_POINTS = {
     { "CCTV Server Room", 2625.7615, 5907.5127, -61.0001, 77.6  },
