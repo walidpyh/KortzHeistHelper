@@ -88,7 +88,7 @@ local CONTROL_SECONDARY = 219
 
 local LASER_LOCAL_VALUE = 4294784 -- alt laser method mask
 
-local BAG_CAPACITY_MAX     = 999
+local BAG_CAPACITY_MAX     = 2000
 local BAG_CAPACITY_DEFAULT = 100
 
 local L2_CASE_STRIDE    = 333
@@ -402,6 +402,29 @@ local function SetBagCapacity(big)
     local value = big and BAG_CAPACITY_MAX or BAG_CAPACITY_DEFAULT
     ScriptGlobal.SetInt(CFG.BAG_CAPACITY, value)
     Log(F("[Bag] Capacity set to %d", value))
+end
+
+local bagCapacityEnabled = false
+local bagCapacityJobRunning = false
+
+local function StartBagCapacityLoop()
+    if bagCapacityJobRunning then return end
+    bagCapacityJobRunning = true
+
+    Script.QueueJob(function()
+        while bagCapacityEnabled do
+            Script.Yield(5000) -- check every 5s (first apply already happened instantly on toggle)
+
+            if bagCapacityEnabled and CFG.BAG_CAPACITY ~= nil then
+                local current = ScriptGlobal.GetInt(CFG.BAG_CAPACITY) or 0
+                if current ~= BAG_CAPACITY_MAX then
+                    ScriptGlobal.SetInt(CFG.BAG_CAPACITY, BAG_CAPACITY_MAX)
+                    Log(F("[Bag] Re-applied capacity (%d -> %d) after reset", current, BAG_CAPACITY_MAX))
+                end
+            end
+        end
+        bagCapacityJobRunning = false
+    end)
 end
 
 -- Unlock the restricted Exhibit L2 cases for solo (zero f_68 + f_143).
@@ -722,11 +745,19 @@ Ftr.BagCapacity = AddFeature({
     id   = "Bag_Capacity",
     name = "Fat Bag",
     type = eFeatureType.Toggle,
-    desc = "Raises the heist bag capacity so you can carry far more loot.  USE WITH CAUTION.",
+    desc = "Raises the heist bag capacity so you can carry far more loot. USE WITH CAUTION.",
     func = function(f)
-        SetBagCapacity(f:IsToggled())
+        bagCapacityEnabled = f:IsToggled()
+
+        if bagCapacityEnabled then
+            SetBagCapacity(true)
+            StartBagCapacityLoop()
+        else
+            SetBagCapacity(false)
+        end
     end
 })
+
 
 Ftr.TpButtons = {}
 for i, p in ipairs(TP_POINTS) do
