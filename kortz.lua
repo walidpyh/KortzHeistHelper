@@ -356,7 +356,8 @@ local function CompleteLaserHackAlt()
     if CFG.LASER_STATE == nil then NotMapped() return end
 
     SetFinaleLocal(CFG.LASER_LOCAL, LASER_LOCAL_VALUE)
-    ScriptGlobal.SetInt(CFG.LASER_STATE, 1)
+    local state = ScriptGlobal.GetInt(CFG.LASER_STATE) or 0
+    ScriptGlobal.SetInt(CFG.LASER_STATE, state | 1)
 
     Log("[Lasers] Alt method applied (local mask + global bit 0)")
     Toast("Lasers disabled (alt).")
@@ -765,7 +766,7 @@ for i, p in ipairs(TP_POINTS) do
         id   = "TP_Go_" .. i,
         name = p[1],
         type = eFeatureType.Button,
-        desc = F("Teleport to %s. Use INSIDE the heist (the interior must be loaded).", p[1]),
+        desc = F("Teleport to %s.", p[1]),
         func = function()
             TeleportTo(p[2], p[3], p[4], p[5], p[6])
             Log(F("[TP] Teleported to «%s» (%.1f, %.1f, %.1f)", p[1], p[2], p[3], p[4]))
